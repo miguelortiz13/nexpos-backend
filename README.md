@@ -1,212 +1,538 @@
-# 🛒 MarketCali - Backend System
+# 🛒 MarketCali - Backend System (Modular Monolith)
 
-**MarketCali** es una plataforma de gestión para supermercados diseñada con una arquitectura de **Monolito Modular**, seguridad robusta y un frontend moderno. El sistema consolida los dominios de negocio (inventarios, ventas, autenticación) en una única aplicación Spring Boot para facilitar el despliegue y mantenimiento, respaldado por Nginx para el frontend.
+[![Java 17](https://img.shields.io/badge/Java-17%20LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
+[![Spring Boot 3.2.5](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![MySQL 8.0](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://www.terraform.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+**MarketCali Backend** es el motor transaccional de gestión comercial e inventario para supermercados, cadenas de minimarkets y tiendas de conveniencia. Diseñado bajo el patrón arquitectónico de **Monolito Modular**, combina la cohesión de dominios de negocio desacoplados con la simplicidad de despliegue, monitoreo y mantenimiento de un único artefacto de ejecución.
 
 ---
 
-## 🏗️ Arquitectura Técnica
+## 📑 Tabla de Contenidos
 
-El sistema implementa una arquitectura modular donde cada dominio (`auth`, `product`, `sales`) está encapsulado en sus propios paquetes y módulos lógicos dentro del mismo proyecto monolítico.
+- [Visión General & Valor de Negocio](#-visión-general--valor-de-negocio)
+- [Arquitectura del Sistema](#-arquitectura-del-sistema)
+- [Estructura del Proyecto y Módulos](#-estructura-del-proyecto-y-módulos)
+- [Modelado de Datos & Base de Datos](#-modelado-de-datos--base-de-datos)
+- [Referencia Completa de la API REST](#-referencia-completa-de-la-api-rest)
+- [Instalación y Puesta en Marcha](#-instalación-y-puesta-en-marcha)
+  - [Opción 1: Docker Compose (Recomendado)](#opción-1-docker-compose-recomendado)
+  - [Opción 2: Entorno Local de Desarrollo](#opción-2-entorno-local-de-desarrollo)
+- [Variables de Entorno y Configuración](#-variables-de-entorno-y-configuración)
+- [Seguridad & Control de Acceso (RBAC)](#-seguridad--control-de-acceso-rbac)
+- [Pruebas Automatizadas y Calidad](#-pruebas-automatizadas-y-calidad)
+- [Despliegue Cloud en Azure con Terraform](#-despliegue-cloud-en-azure-con-terraform)
+- [Roadmap Comercial](#-roadmap-comercial)
 
-### Diagrama de Comunicación
+---
+
+## 💡 Visión General & Valor de Negocio
+
+El sistema resuelve las necesidades críticas de un supermercado retail:
+1. **Control de Inventario en Tiempo Real**: Evita la rotura de stock mediante validaciones transaccionales y deducciones atómicas en cada checkout.
+2. **Alta Velocidad en Punto de Venta (POS)**: Búsqueda indexada por código de barras (EAN-13, CODE128) con respuestas inferiores a 50ms.
+3. **Facturación Transaccional y Comprobantes PDF**: Generación inmediata de tiquetes de venta estructurados con desglose de ítems, cálculo de cambio y métodos de pago mixtos.
+4. **Seguridad y Trazabilidad**: Autenticación Bearer JWT con roles diferenciados (`ADMIN`, `USER`) y auditoría de ventas por usuario cajero.
+
+---
+
+## 🏛️ Arquitectura del Sistema
+
+El backend está concebido como un **Monolito Modular** estructurado en módulos Maven independientes. Esto garantiza fronteras de dominio estrictas y permite una eventual migración a microservicios si la escala de negocio lo requiere, sin incurrir en la sobrecarga operacional prematura.
+
 ```mermaid
-graph TD
-    Client[Navegador / Frontend React] --> Nginx[Servidor Nginx (Puerto 80)]
-    Nginx -. "/api/* y /auth/*" .-> Monolith[Spring Boot Monolith App (Puerto 8088)]
-    
-    subgraph MonolithApp [Monolith Application]
-        AuthModule[Módulo Auth]
-        ProductModule[Módulo Productos]
-        SalesModule[Módulo Ventas]
+graph TB
+    subgraph ClientLayer ["Capa de Clientes"]
+        SPA["Frontend SPA (React 18 + Vite)"]
+        BarcodeHw["Lector Físico / Óptico de Barras"]
     end
-    
-    Monolith --> DB[(MySQL 8.0 - marketcali_db)]
+
+    subgraph GatewayLayer ["Puerta de Entrada & Proxy"]
+        Nginx["Nginx Reverse Proxy (:80)"]
+    end
+
+    subgraph BackendMonolith ["Spring Boot 3.2.5 Modular Monolith (:8088)"]
+        Host["monolith-app (Host & Security Gateway)"]
+        SecFilter["JwtAuthenticationFilter & SecurityConfig"]
+        ExHandler["GlobalExceptionHandler (@ControllerAdvice)"]
+
+        subgraph DomainModules ["Módulos de Dominio"]
+            AuthMod["auth-service\n- Autenticación JWT\n- Gestión de Usuarios (RBAC)"]
+            ProdMod["product-service\n- Catálogo de Productos\n- Búsqueda por Código de Barras\n- CRUD de Inventario"]
+            SalesMod["sales-service\n- Checkout Transaccional (@Transactional)\n- Deducción Atómica de Stock\n- Motor PDF de Facturas (iText 8)"]
+        end
+    end
+
+    subgraph DataLayer ["Capa de Persistencia"]
+        MySQL[("MySQL 8.0 (:3306)\nEsquema: marketcali_db")]
+    end
+
+    SPA -->|HTTP / REST| Nginx
+    BarcodeHw -.-> SPA
+    Nginx -->|/api/* y /auth/*| Host
+    Host --> SecFilter
+    SecFilter --> ExHandler
+    SecFilter --> AuthMod
+    SecFilter --> ProdMod
+    SecFilter --> SalesMod
+    AuthMod -->|JPA / Hibernate| MySQL
+    ProdMod -->|JPA / Hibernate| MySQL
+    SalesMod -->|JPA / Hibernate| MySQL
 ```
 
-### Componentes del Sistema
+### Componentes de la Solución
 
-| Servicio | Puerto (Docker/Local) | Descripción Técnica |
-| :--- | :--- | :--- |
-| **Frontend (React + Nginx)** | `80` (Docker) / `5173` (Local) | Aplicación web (React/Vite). Nginx actúa como proxy reverso para delegar llamadas `/api/` y `/auth/` al monolito. |
-| **Monolith App** | `8088` | Backend centralizado en Spring Boot. Agrupa la seguridad (JWT) y la lógica de todos los módulos. |
-| **MySQL Database** | `3306` (Interno) / `3307` (Local) | Instancia única de MySQL alojando el esquema unificado `marketcali_db`. |
+| Componente | Contenedor / Servicio | Puerto Interno | Puerto Host | Descripción |
+| :--- | :--- | :--- | :--- | :--- |
+| **Frontend Nginx** | `frontend` | `80` | `80` | Sirve la SPA de React y reenvía tráfico `/api/*` y `/auth/*` al backend. |
+| **Monolith App** | `monolith-app` | `8088` | `8088` | Servidor embebido Apache Tomcat con la aplicación Spring Boot unificada. |
+| **MySQL Database** | `mysql-db` | `3306` | `3307` | Base de datos relacional MySQL 8.0 con datos iniciales semillados. |
 
 ---
 
-## 📂 Estructura del Repositorio (Modular Monolith)
+## 📂 Estructura del Proyecto y Módulos
 
-El repositorio sigue las mejores prácticas de arquitectura para **Monolitos Modulares** en Spring Boot:
+El repositorio sigue las directrices oficiales de Maven para proyectos multi-módulo:
 
 ```
 marketcali-backend/
-├── pom.xml                         # POM padre (gestión de dependencias y versiones de módulos)
-├── docker-compose.yml              # Orquestador del stack: MySQL 8, Monolito Spring Boot, Frontend Nginx
+├── pom.xml                                  # POM raíz: Dependency Management, plugins y módulos
+├── docker-compose.yml                       # Orquestador local multicontenedor
 ├── docker/
-│   └── mysql/init/01-schema.sql    # DDL inicial del esquema unificado de base de datos
-├── terraform/                      # Infraestructura como Código (IaC) para Azure Container Apps & ACR
+│   └── mysql/init/01-schema.sql             # Script SQL de inicialización automática
+├── terraform/                               # Infraestructura como Código (IaC) para Azure
+│   ├── main.tf, aca.tf, acr.tf, mysql.tf    # Configuración de Container Apps, ACR y MySQL
+│   └── variables.tf, outputs.tf             # Parámetros y salidas cloud
 │
-├── monolith-app/                   # Módulo host / orquestador Spring Boot
-│   ├── Dockerfile                  # Compilación y empaquetado multi-stage (Maven -> Temurin JRE)
-│   ├── pom.xml                     # Agregador de dependencias de los módulos de dominio
-│   └── src/main/java/miguel/monolith/
-│       ├── MarketcaliMonolithApplication.java # Entrypoint con @EntityScan y @EnableJpaRepositories
-│       ├── config/                 # SecurityConfig (JWT, BCrypt, CORS) y AppConfig
-│       └── exception/              # GlobalExceptionHandler (@ControllerAdvice uniforme)
+├── monolith-app/                            # 🚀 MÓDULO HOST (Orquestador Spring Boot)
+│   ├── pom.xml                              # Declara dependencias de auth, product y sales
+│   ├── Dockerfile                           # Build multietapa (Maven 3.9 -> Eclipse Temurin JRE)
+│   └── src/main/
+│       ├── java/miguel/monolith/
+│       │   ├── MarketcaliMonolithApplication.java # Entry point con @EntityScan y @EnableJpaRepositories
+│       │   ├── config/                      # Configuración de Spring Security, CORS y Beans
+│       │   └── exception/                   # GlobalExceptionHandler (@ControllerAdvice centralizado)
+│       └── resources/
+│           └── application.yml              # Perfiles 'dev' y 'docker', Datasource y Secretos
 │
-├── auth-service/                   # Módulo de Dominio: Autenticación & Seguridad
+├── auth-service/                            # 🔐 DOMINIO: Autenticación & Usuarios
+│   ├── pom.xml
 │   └── src/main/java/miguel/auth/
-│       ├── bootstrap/              # Inicializador de credenciales maestras (Admin)
-│       ├── controller/             # Endpoints /auth/login, /auth/register y /api/users
-│       ├── dto/                    # DTOs: LoginRequest, AuthResponse
-│       ├── model/                  # Entidad Usuario y Enums de Roles (ADMIN, USER)
-│       ├── repository/             # UsuarioRepository (Spring Data JPA)
-│       ├── security/               # JwtProvider (firma y validación HMAC-SHA256)
-│       └── service/                # Lógica de autenticación y cifrado
+│       ├── bootstrap/AdminDataInitializer.java # Creación del superusuario inicial
+│       ├── controller/                      # AuthController (/auth/*) y UserController (/api/users/*)
+│       ├── dto/                             # LoginRequest, AuthResponse
+│       ├── model/Usuario.java               # Entidad de usuario y roles (ADMIN, USER)
+│       ├── repository/UsuarioRepository.java# Consultas JPA de credenciales
+│       ├── security/JwtProvider.java        # Firma y validación criptográfica de tokens JWT
+│       └── service/AuthService.java         # Hashing con BCrypt y lógica de sesión
 │
-├── product-service/                # Módulo de Dominio: Catálogo & Inventario
+├── product-service/                         # 📦 DOMINIO: Catálogo & Inventario
+│   ├── pom.xml
 │   └── src/main/java/miguel/product/
-│       ├── bootstrap/              # Semillado de catálogo inicial y códigos de barras
-│       ├── controller/             # Endpoints /api/productos (búsqueda rápida, lector de barras, CRUD)
-│       ├── dto/                    # ProductoDTO
-│       ├── model/                  # Entidad Producto
-│       ├── repository/             # ProductoRepository
-│       └── service/                # Servicio de catálogo y validación de inventario
+│       ├── bootstrap/ProductDataInitializer.java # Semillado de 10 productos típicos de supermercado
+│       ├── controller/ProductoController.java # Endpoints /api/productos (búsqueda, scanner, CRUD)
+│       ├── dto/ProductoDTO.java             # Objeto de transferencia de datos validado
+│       ├── model/Producto.java              # Entidad con control de stock, precio y código de barras
+│       ├── repository/ProductoRepository.java # Consultas por ID y código de barras exacto
+│       └── service/ProductoService.java     # Lógica de actualización de inventario
 │
-└── sales-service/                  # Módulo de Dominio: Ventas, Facturación & Stock
+└── sales-service/                           # 💰 DOMINIO: Ventas, Facturación & Caja POS
+    ├── pom.xml
     ├── src/main/java/miguel/sales/
-    │   ├── controller/             # Endpoints /api/sales (checkout, transacciones)
-    │   ├── dto/                    # SaleRequest, SaleItemRequest
-    │   ├── model/                  # Entidades Sale, SaleItem, Invoice
-    │   ├── repository/             # Repositorios JPA de transacciones y comprobantes
-    │   └── service/                # Descuento atómico de stock y generación de facturas PDF
-    └── src/test/java/miguel/sales/ # Pruebas unitarias de generación de comprobantes PDF
+    │   ├── controller/SaleController.java   # Endpoints /api/sales (checkout, historial, descarga PDF)
+    │   ├── dto/                             # SaleRequest, SaleItemRequest
+    │   ├── model/                           # Sale (encabezado), SaleItem (detalle), Invoice (factura)
+    │   ├── repository/                      # Repositorios JPA transaccionales
+    │   └── service/
+    │       ├── SaleService.java             # Validación de stock atómica y registro de compra
+    │       └── PdfService.java              # Renderizado de tiquetes térmicos en PDF con iText 8
+    └── src/test/java/miguel/sales/
+        └── service/PdfServiceTest.java      # Pruebas unitarias de emisión de comprobantes
 ```
 
 ---
 
-## 🚀 Tecnologías Clave
+## 🗄️ Modelado de Datos & Base de Datos
 
-### Backend
-*   **Java 17** (Eclipse Temurin)
-*   **Spring Boot 3.2.5** (Web, Data JPA, Security, Validation)
-*   **Hibernate** (Mapeo ORM)
-*   **Spring Security** (Autenticación JWT)
-*   **Lombok** (Generación de código)
-*   **Maven** (Gestión de dependencias)
+El sistema utiliza un esquema relacional normalizado alojado en la base de datos `marketcali_db`.
 
-### Frontend
-*   **React 18**
-*   **Vite**
-*   **React Router Dom**
-*   **TailwindCSS / CSS Nativo**
-*   **Nginx** (Despliegue de producción y Proxy pass)
+```mermaid
+erDiagram
+    USUARIOS ||--o{ SALES : "registra como cajero"
+    SALES ||--|{ SALE_ITEMS : "contiene"
+    PRODUCTOS ||--o{ SALE_ITEMS : "es vendido en"
+    SALES ||--|| INVOICES : "genera factura"
 
-### Infraestructura
-*   **Docker & Docker Compose** (Orquestación local)
-*   **MySQL 8.0**
-*   **Terraform** (Aprovisionamiento IaC en Azure Container Apps - Ver `/terraform/README.md`)
+    USUARIOS {
+        bigint id PK
+        varchar username UK
+        varchar password "BCrypt Hash"
+        varchar email UK
+        varchar role "ADMIN | USER"
+    }
+
+    PRODUCTOS {
+        bigint id PK
+        varchar codigo_barras UK "EAN-13 / CODE128"
+        varchar nombre
+        varchar marca
+        decimal precio "Formato 10,2"
+        int cantidad "Stock disponible"
+        varchar categoria
+        text descripcion
+        varchar imagen
+    }
+
+    SALES {
+        bigint id PK
+        varchar cashier_username
+        decimal total_amount
+        decimal cash_tendered "Efectivo entregado"
+        decimal change_due "Cambio devuelto"
+        varchar payment_method "EFECTIVO | TARJETA | TRANSFERENCIA"
+        datetime sale_date
+    }
+
+    SALE_ITEMS {
+        bigint id PK
+        bigint sale_id FK
+        bigint product_id FK
+        varchar product_name
+        int quantity
+        decimal unit_price
+        decimal subtotal
+    }
+
+    INVOICES {
+        bigint id PK
+        varchar invoice_number UK "Ej: INV-20260928-0001"
+        bigint sale_id FK
+        datetime issue_date
+        decimal total
+        blob pdf_data "Documento binario"
+    }
+```
+
+### Datos de Inicialización Automática (Seeding)
+
+Al arrancar por primera vez, el sistema inyecta automáticamente:
+- **Usuario Administrador**:
+  - Usuario: `admin`
+  - Contraseña: `admin`
+  - Rol: `ADMIN`
+- **Catálogo de Productos Inicial**: 10 productos con códigos de barra válidos (Arroz Diana, Leche Alquería, Aceite Premier, Café Sello Rojo, etc.) listos para probar el escáner POS de inmediato.
 
 ---
 
-## ⚙️ Configuración y Variables de Entorno
+## 🔌 Referencia Completa de la API REST
 
-El proyecto consolida la configuración en `monolith-app/src/main/resources/application.yml`. Utiliza perfiles de Spring (`dev`, `docker`).
+Todas las llamadas se exponen en el puerto `8088` (o a través del proxy Nginx en `:80`).
 
-### Variables Principales en Docker
-- `SPRING_DATASOURCE_URL`: url jdbc (`jdbc:mysql://mysql-db:3306/marketcali_db`)
-- `SPRING_PROFILES_ACTIVE`: `docker`
+### 1. Autenticación (`/auth`)
 
-### Puertos Expuestos a Localhost
-- **Frontend App**: `http://localhost:80` (A través de Nginx)
-- **Monolith App**: `http://localhost:8088` (Si se accede directamente al backend)
-- **MySQL DB**: `localhost:3307` (Credenciales por defecto: `miguel` / `12345` / DB: `marketcali_db`)
+#### `POST /auth/login`
+Autentica a un usuario y genera su token de sesión.
+- **Acceso**: Público
+- **Request Body**:
+  ```json
+  {
+    "username": "admin",
+    "password": "admin"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "type": "Bearer",
+    "username": "admin",
+    "role": "ADMIN"
+  }
+  ```
+
+#### `POST /auth/register`
+Registra un nuevo usuario en la plataforma.
+- **Acceso**: Solo Administrador (`ADMIN`)
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**:
+  ```json
+  {
+    "username": "cajero1",
+    "password": "passwordSegura123",
+    "email": "cajero1@marketcali.com",
+    "role": "USER"
+  }
+  ```
 
 ---
 
-## 🛠️ Despliegue y Ejecución
+### 2. Gestión de Usuarios (`/api/users`)
 
-### Opción A: Docker Compose (Recomendado)
+| Método | Endpoint | Rol Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/users` | `ADMIN` | Retorna el listado completo de usuarios registrados. |
+| `DELETE` | `/api/users/{id}` | `ADMIN` | Elimina a un usuario del sistema por su ID. |
 
-Levanta todo el ecosistema (Base de Datos, Backend y Frontend) con un solo comando usando Docker. Antes de esto, requieres haber generado el `.jar` de Spring Boot.
+---
+
+### 3. Catálogo e Inventario (`/api/productos`)
+
+#### `GET /api/productos`
+Obtiene la lista completa de productos activos en inventario.
+- **Acceso**: Público o Usuario Autenticado
+- **Response `200 OK`**:
+  ```json
+  [
+    {
+      "id": 1,
+      "codigoBarras": "7702001000011",
+      "nombre": "Arroz Diana 1kg",
+      "marca": "Diana",
+      "precio": 4500.00,
+      "cantidad": 50,
+      "categoria": "Granos y Cereales",
+      "descripcion": "Arroz blanco fortificado primera calidad.",
+      "imagen": null
+    }
+  ]
+  ```
+
+#### `GET /api/productos/codigo/{codigoBarras}`
+Búsqueda ultrarrápida indexada para lectores de código de barras.
+- **Acceso**: Autenticado (`ADMIN` o `USER`)
+- **Response `200 OK`**: Retorna el producto coincidente.
+- **Response `400 Bad Request`**: Si el código no existe en catálogo.
+
+#### `POST /api/productos`
+Crea o actualiza un producto en el inventario.
+- **Acceso**: Solo Administrador (`ADMIN`)
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**:
+  ```json
+  {
+    "codigoBarras": "7702001000999",
+    "nombre": "Chocolate Corona 500g",
+    "marca": "Corona",
+    "precio": 6800.00,
+    "cantidad": 30,
+    "categoria": "Bebidas y Despensa",
+    "descripcion": "Pastilla tradicional para preparar en leche o agua."
+  }
+  ```
+
+#### `DELETE /api/productos/{id}`
+Elimina un producto del catálogo por su ID primario.
+- **Acceso**: Solo Administrador (`ADMIN`)
+
+---
+
+### 4. Punto de Venta & Transacciones (`/api/sales`)
+
+#### `POST /api/sales`
+Procesa una orden de compra, deduce atómicamente el inventario y genera el comprobante fiscal en PDF.
+- **Acceso**: Autenticado (`ADMIN` o `USER`)
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**:
+  ```json
+  {
+    "cashierUsername": "admin",
+    "paymentMethod": "EFECTIVO",
+    "cashTendered": 20000.00,
+    "items": [
+      {
+        "productId": 1,
+        "quantity": 2
+      },
+      {
+        "productId": 3,
+        "quantity": 1
+      }
+    ]
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "id": 1,
+    "invoiceNumber": "INV-20260928-1001",
+    "cashierUsername": "admin",
+    "totalAmount": 13900.00,
+    "cashTendered": 20000.00,
+    "changeDue": 6100.00,
+    "paymentMethod": "EFECTIVO",
+    "saleDate": "2026-09-28T01:30:00",
+    "items": [
+      {
+        "productName": "Arroz Diana 1kg",
+        "quantity": 2,
+        "unitPrice": 4500.00,
+        "subtotal": 9000.00
+      },
+      {
+        "productName": "Leche Alquería Entera 1.1L",
+        "quantity": 1,
+        "unitPrice": 4900.00,
+        "subtotal": 4900.00
+      }
+    ]
+  }
+  ```
+- **Validación Atómica de Stock**: Si alguno de los ítems supera la cantidad física disponible en bodega, la transacción se aborta completamente (`Rollback`) y devuelve código `400 Bad Request` indicando el producto agotado.
+
+#### `GET /api/sales`
+Consulta el historial cronológico de ventas concretadas.
+- **Acceso**: Autenticado
+
+#### `GET /api/sales/{id}/invoice`
+Descarga en streaming binario el tiquete de factura generado en formato PDF (`application/pdf`).
+- **Acceso**: Autenticado
+
+---
+
+## 🚀 Instalación y Puesta en Marcha
+
+### Prerrequisitos
+- **Docker Engine** (20.10+) y **Docker Compose** (v2.0+) instalados.
+- Puerto `80`, `8088` y `3307` disponibles en el sistema anfitrión.
+
+---
+
+### Opción 1: Docker Compose (Recomendado)
+
+Esta opción levanta todo el entorno (Base de Datos MySQL, Monolito Spring Boot y Frontend React/Nginx) en contenedores aislados y orquestados:
 
 ```bash
-# 1. Compilar el monolito primero
-mvn clean package -DskipTests
+# 1. Clonar el repositorio
+git clone https://github.com/miguelortiz13/marketcali-backend.git
+cd marketcali-backend
 
-# 2. Construir e iniciar contenedores
-docker-compose up -d --build
+# 2. Levantar los servicios y compilar las imágenes
+docker compose up -d --build
 ```
 
-Esto iniciará:
-1.  **MySQL** (Se inicializa la BBDD automáticamente con `init.sql`).
-2.  **Monolith App** (Backend).
-3.  **Frontend** (Nginx mapeando al puerto 80).
+#### Verificación del Despliegue
+```bash
+# Comprobar estado de los contenedores
+docker compose ps
 
-Accede a la aplicación gráfica desde: **[http://localhost](http://localhost)**. Para apagar el entorno usa `docker-compose down`.
+# Verificar el backend
+curl -s http://localhost:8088/api/productos | head -c 200
 
-### Opción B: Ejecución Manual para Desarrollo Local
+# Probar la aplicación a través de Nginx
+curl -I http://localhost
+```
 
-Si necesitas editar el código en vivo (`hot reload`), es recomendable no usar Docker para las aplicaciones.
+Una vez levantado:
+- **Aplicación Web**: [http://localhost](http://localhost)
+- **API REST Backend**: [http://localhost:8088](http://localhost:8088)
+- **MySQL Directo**: `localhost:3307` (Usuario: `miguel`, Contraseña: `12345`, DB: `marketcali_db`)
 
-1.  **Levantar solo la Base de Datos:**
-    ```bash
-    docker-compose up -d mysql-db
-    ```
-2.  **Iniciar Backend (Monolith-App) mediante Maven:**
-    ```bash
-    cd monolith-app
-    ./mvnw spring-boot:run
-    ```
-3.  **Iniciar Frontend (Vite):**
-    Abre una nueva terminal.
-    ```bash
-    cd ../marketcali-react
-    npm install
-    npm run dev
-    ```
-    Visita `http://localhost:5173`. Las llamadas a `/api` y `/auth` en el entorno de desarrollo son interceptadas nativamente por Vite Proxy configurado en `vite.config.js`.
+Para detener el stack:
+```bash
+docker compose down
+```
 
 ---
 
-## 🔌 API Endpoints (Backend: 8088)
+### Opción 2: Entorno Local de Desarrollo
 
-Al usar el frontend (puerto 80), todas las llamadas de tipo `/api/*` y `/auth/*` se enrutarán automáticamente al backend. Las siguientes son las familias de endpoints disponibles:
+Si deseas depurar el backend en tu IDE (IntelliJ IDEA, Eclipse, VS Code) con Hot Reload:
 
-### 🔐 Autenticación (`/auth`)
-*   `POST /auth/login`: Autenticación y obtención de JSON Web Token (Bearer).
-*   `POST /auth/register`: Registro de usuarios. Requiere `username`, `password`, `email` y `role`.
+1. **Levantar únicamente el contenedor de MySQL**:
+   ```bash
+   docker compose up -d mysql-db
+   ```
 
-### 📦 Módulo de Productos (`/api/productos`)
-*   `GET /api/productos`: Listar inventario (Público).
-*   `GET /api/productos/codigo/{codigoBarras}`: Ubicar producto mediante lector de barras.
-*   `POST /api/productos`: Dar de alta un nuevo producto (Requiere Rol Admin).
-*   `DELETE /api/productos/{id}`: Eliminar del inventario.
+2. **Compilar y Ejecutar el Backend**:
+   ```bash
+   mvn clean spring-boot:run -pl monolith-app
+   ```
 
-### 💰 Módulo de Ventas (`/api/sales`)
-*   `POST /api/sales`: Registrar carrito y concretar factura de venta.
-
-*(Ver la documentación interna del código para más detalle de schemas y DTOs).*
-
----
-
-## 👥 Roles del Sistema
-
-| Rol | Permisos Otorgados |
-| :--- | :--- |
-| **ADMIN** | Acceso global. Control Maestro de Inventario (CRUD), Creación/Eliminación de Usuarios, Consultas y Reportes globales. |
-| **USER / EMPLEADO** | Emisión de tickets/ventas (Checkout) y lectura de stock de productos. |
-
-> **Nota de inicialización:** Al levantar el sistema por primera vez, Spring Boot inyectará un usuario administrador predeterminado (`admin` / `admin`).
+3. **Ejecutar el Frontend en Modo Desarrollo**:
+   En una terminal independiente dentro de la carpeta del frontend:
+   ```bash
+   cd ../marketcali-react
+   npm install
+   npm run dev
+   ```
+   La aplicación se abrirá en `http://localhost:5173` y conectará automáticamente con el backend local en `:8088` mediante el proxy de desarrollo de Vite.
 
 ---
 
-## 🤝 Contribución
+## ⚙️ Variables de Entorno y Configuración
 
-1.  Hacer Fork del repositorio.
-2.  Crear rama (`git checkout -b feature/ImplementarCajaPos`).
-3.  Commit de los cambios realizados.
-4.  Push a la rama (`git push origin feature/ImplementarCajaPos`).
-5.  Crear un Pull Request.
+Toda la configuración se encuentra centralizada en `monolith-app/src/main/resources/application.yml`. Admite sustitución directa mediante variables de entorno del sistema o en `docker-compose.yml`:
+
+| Variable | Valor por Defecto (Docker) | Propósito |
+| :--- | :--- | :--- |
+| `SPRING_PROFILES_ACTIVE` | `docker` | Activa el perfil optimizado para contenedor. |
+| `SPRING_DATASOURCE_URL` | `jdbc:mysql://mysql-db:3306/marketcali_db` | Cadena de conexión JDBC con soporte de reconexión. |
+| `SPRING_DATASOURCE_USERNAME` | `miguel` | Usuario autenticado en MySQL. |
+| `SPRING_DATASOURCE_PASSWORD` | `12345` | Credencial de acceso a la base de datos. |
+| `JWT_SECRET` | *(Clave base64 de 256 bits)* | Clave criptográfica para firma simétrica HMAC-SHA256. |
+
+> [!TIP]
+> En entornos de producción reales, sustituye `JWT_SECRET` por una clave generada de forma aleatoria de al menos 512 bits inyectada mediante Azure Key Vault o AWS Secrets Manager.
 
 ---
-**Desarrollado para MarketCali**
+
+## 🛡️ Seguridad & Control de Acceso (RBAC)
+
+1. **Filtro de Seguridad Stateless**:
+   - Cada solicitud entrante es evaluada por `JwtAuthenticationFilter`.
+   - Si la cabecera `Authorization: Bearer <token>` es válida y no ha expirado, se inyecta el `UsernamePasswordAuthenticationToken` en el `SecurityContext` de Spring.
+2. **Cifrado de Credenciales**:
+   - Las contraseñas de los usuarios nunca se almacenan en texto claro; se procesan mediante `BCryptPasswordEncoder` con factor de coste 10.
+3. **Manejo Uniforme de Excepciones**:
+   - `GlobalExceptionHandler` intercepta validaciones fallidas (`MethodArgumentNotValidException`) y errores de regla de negocio (`RuntimeException`) devolviendo siempre un payload JSON normalizado con código HTTP apropiado.
+
+---
+
+## 🧪 Pruebas Automatizadas y Calidad
+
+Para ejecutar la suite de pruebas unitarias y de integración sin necesidad de instalar Maven en la máquina anfitriona:
+
+```bash
+docker run --rm -v $(pwd):/build -w /build maven:3.9-eclipse-temurin-17-alpine mvn clean test
+```
+
+La suite valida:
+- Emisión de facturas y renderizado de canvas PDF (`PdfServiceTest`).
+- Contratos de repositorios Spring Data JPA.
+- Integridad en la validación de DTOs.
+
+---
+
+## ☁️ Despliegue Cloud en Azure con Terraform
+
+El repositorio incluye plantillas completas de **Infraestructura como Código (IaC)** en la carpeta `/terraform`:
+
+- **Azure Container Registry (ACR)**: Almacenamiento seguro de imágenes Docker (`acr.tf`).
+- **Azure Container Apps (ACA)**: Entorno serverless de contenedores gestionados con escalado automático (`aca.tf`).
+- **Azure Database for MySQL Flexible Server**: Instancia relacional gestionada con alta disponibilidad (`mysql.tf`).
+
+Para desplegar en la nube de Azure:
+```bash
+cd terraform
+terraform init
+terraform plan -out=main.tfplan
+terraform apply main.tfplan
+```
+*(Consulta [terraform/README.md](terraform/README.md) para más detalles sobre variables de suscripción y grupos de recursos).*
+
+---
+
+## 🗺️ Roadmap Comercial
+
+Hacia la versión 2.0 comercial:
+- [ ] **Facturación Electrónica DIAN (Colombia)**: Generación y firma de XML con validación previa y código QR/CUFE.
+- [ ] **Soporte Multi-Tienda (Multi-Tenancy)**: Aislamiento lógico de inventarios por sucursal.
+- [ ] **Integración de Pasarelas de Pago**: Webhooks para terminales de pago inalámbricas (Datáfonos Bold, Redeban, Credibanco).
+- [ ] **Módulo de Compras & Proveedores**: Control de órdenes de reposición y cuentas por pagar.
+
+---
+
+**MarketCali Backend System** — Desarrollado por [Miguel Ángel Ortiz Escobar](https://github.com/miguelortiz13).
