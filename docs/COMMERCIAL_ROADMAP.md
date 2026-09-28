@@ -65,14 +65,56 @@ graph TD
 
 ## 3. Pilares Técnicos para la Comercialización Masiva
 
-### Pilar A: Facturación Electrónica DIAN (Colombia)
-Para venderse formalmente a empresas y supermercados en Colombia, el sistema debe cumplir con el **Documento Equivalente Electrónico POS** (Resolución DIAN 000165 de 2023):
-*   **Estrategia Técnica**: Integración mediante API REST con un Proveedor Tecnológico Autorizado (PTA) como *Factus*, *Siigo*, *Alegra* o *The Factory HKA*.
-*   **Flujo**:
-    1. Al cerrar la venta en `/api/sales`, el sistema despacha un evento asíncrono.
-    2. Se genera el payload JSON con la información tributaria (Resolución de facturación, prefijo, consecutivo, IVA 19%, INC, datos del adquirente).
-    3. El PTA valida ante la DIAN, retorna el código **CUFE** y la URL del código **QR**.
-    4. La factura térmica se imprime con el QR reglamentario.
+### Pilar A: Facturación Electrónica DIAN (Colombia) — Proveedor Designado: Factus
+
+Para comercializarse legalmente a supermercados y comercios en Colombia, el sistema implementará la emisión del **Documento Equivalente Electrónico POS** (Resolución DIAN 000165 de 2023). 
+
+#### 🏆 Proveedor Tecnológico Seleccionado: **Factus** ([factus.com.co](https://factus.com.co))
+Tras evaluar alternativas como *The Factory HKA*, *Dataico* y la conexión directa SOAP con la DIAN, se seleccionó a **Factus** como el proveedor oficial por las siguientes razones:
+1. **API REST Moderna**: Payloads en formato JSON estándar (evitando la sobrecarga y fragilidad del protocolo SOAP/XML de la DIAN).
+2. **Ambiente Sandbox Gratuito**: Permite simular y probar emisiones de facturas electrónicas de prueba de inmediato.
+3. **Costo Marginal Altamente Competitivo**: ~$50 a $85 COP por factura emitida, maximizando el margen de ganancia del modelo SaaS.
+4. **Validación Previa Inmediata (<1 segundo)**: Vital para cajas de supermercado con clientes esperando en fila.
+
+#### Diagrama de Integración con Factus
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cajero
+    participant POS as Frontend MarketCali (React)
+    participant Backend as sales-service (Spring Boot)
+    participant Factus as API Factus (Proveedor Tecnológico)
+    participant DIAN as Servidores DIAN Colombia
+    participant Impresora as Impresora Térmica POS
+
+    Cajero->>POS: Presiona "Cobrar Venta"
+    POS->>Backend: POST /api/sales (items, medio de pago, cliente)
+    Note over Backend: 1. Deduce stock atómicamente (@Transactional)<br/>2. Genera registro de venta local
+    Backend->>Factus: POST /v1/bills/validate (Payload JSON Factus)
+    Note over Factus: Genera XML UBL 2.1, firma con XAdES-EPES y calcula CUDE
+    Factus->>DIAN: Envía comprobante a validación previa
+    DIAN-->>Factus: Aprobación DIAN (Estado: Exitosa)
+    Factus-->>Backend: Respuesta JSON: CUDE, QR URL, Estado y Enlace al PDF/XML
+    Note over Backend: Almacena CUDE y QR en tabla 'invoices'
+    Backend-->>POS: 200 OK (Venta registrada con CUDE y QR)
+    POS->>Impresora: Imprime tiquete térmico con código QR reglamentario
+    POS-->>Cajero: Beep de confirmación y apertura de gaveta
+```
+
+#### Requerimientos de Datos a Incorporar:
+1. **Configuración de Empresa (`company_config`)**:
+   - NIT del comercio, Razón Social, Dirección, Municipio y Régimen tributario (Responsable / No Responsable de IVA).
+   - Datos de Resolución DIAN: Prefijo (ej: `POS`), Rango autorizado (ej: `1` a `20.000`), Clave técnica y Fecha de vigencia.
+2. **Productos (`productos`)**:
+   - Tarifa de IVA (`iva_rate`: 0%, 5%, 19%) y Código estándar de unidad de medida DIAN (`94` para unidades, `KGM` para peso).
+3. **Facturas (`invoices`)**:
+   - Almacenamiento del `cude`, `qr_data` y estado de validación devuelto por Factus.
+
+#### Proceso de Habilitación para el Supermercado Cliente:
+1. Contar con RUT activo con la responsabilidad tributaria `52` (Facturador Electrónico).
+2. Ingresar al portal de la DIAN (`catalogo-vpfe.dian.gov.co`) y asociar a **Factus** como su Proveedor Tecnológico Autorizado en modo de operación (proceso guiado de 10 minutos).
+3. Solicitar autorización de numeración para Documento Equivalente POS en el sistema Muisca.
+4. Ingresar el Token de API de Factus en el panel de configuración de MarketCali.
 
 ---
 
@@ -114,7 +156,7 @@ gantt
     Estabilización Monolito, Swagger y Métricas :done, 2026-09, 2026-10
     Piloto en 1 Supermercado Real :active, 2026-10, 2026-11
     section Fase 2: Cumplimiento
-    Integración Facturación Electrónica DIAN : 2026-11, 2027-01
+    Integración Facturación Electrónica DIAN (Factus API) : 2026-11, 2027-01
     Homologación de Impresoras Térmicas ESC/POS : 2026-12, 2027-01
     section Fase 3: Escalamiento
     SaaS Multi-Sucursales & Cuentas : 2027-01, 2027-03

@@ -576,7 +576,7 @@ terraform apply main.tfplan
 ## 🗺️ Roadmap Comercial
 
 Hacia la versión 2.0 comercial:
-- [ ] **Facturación Electrónica DIAN (Colombia)**: Generación y firma de XML con validación previa y código QR/CUFE.
+- [ ] **Facturación Electrónica DIAN (Colombia)**: Integración REST con Proveedor Tecnológico Autorizado **Factus** (emisión de Documento Equivalente POS, validación previa, CUDE y QR reglamentario - Ver [docs/COMMERCIAL_ROADMAP.md](docs/COMMERCIAL_ROADMAP.md)).
 - [ ] **Soporte Multi-Tienda (Multi-Tenancy)**: Aislamiento lógico de inventarios por sucursal.
 - [ ] **Integración de Pasarelas de Pago**: Webhooks para terminales de pago inalámbricas (Datáfonos Bold, Redeban, Credibanco).
 - [ ] **Módulo de Compras & Proveedores**: Control de órdenes de reposición y cuentas por pagar.
