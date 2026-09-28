@@ -1,4 +1,4 @@
-package miguel.product.exception;
+package miguel.monolith.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

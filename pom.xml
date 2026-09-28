@@ -13,7 +13,7 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>marketcali-backend</name>
-    <description>Marketcali Microservices Project</description>
+    <description>MarketCali Modular Monolith System</description>
     
     <modules>
         <module>auth-service</module>

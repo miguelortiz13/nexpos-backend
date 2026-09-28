@@ -33,6 +33,57 @@ graph TD
 
 ---
 
+## 📂 Estructura del Repositorio (Modular Monolith)
+
+El repositorio sigue las mejores prácticas de arquitectura para **Monolitos Modulares** en Spring Boot:
+
+```
+marketcali-backend/
+├── pom.xml                         # POM padre (gestión de dependencias y versiones de módulos)
+├── docker-compose.yml              # Orquestador del stack: MySQL 8, Monolito Spring Boot, Frontend Nginx
+├── docker/
+│   └── mysql/init/01-schema.sql    # DDL inicial del esquema unificado de base de datos
+├── terraform/                      # Infraestructura como Código (IaC) para Azure Container Apps & ACR
+│
+├── monolith-app/                   # Módulo host / orquestador Spring Boot
+│   ├── Dockerfile                  # Compilación y empaquetado multi-stage (Maven -> Temurin JRE)
+│   ├── pom.xml                     # Agregador de dependencias de los módulos de dominio
+│   └── src/main/java/miguel/monolith/
+│       ├── MarketcaliMonolithApplication.java # Entrypoint con @EntityScan y @EnableJpaRepositories
+│       ├── config/                 # SecurityConfig (JWT, BCrypt, CORS) y AppConfig
+│       └── exception/              # GlobalExceptionHandler (@ControllerAdvice uniforme)
+│
+├── auth-service/                   # Módulo de Dominio: Autenticación & Seguridad
+│   └── src/main/java/miguel/auth/
+│       ├── bootstrap/              # Inicializador de credenciales maestras (Admin)
+│       ├── controller/             # Endpoints /auth/login, /auth/register y /api/users
+│       ├── dto/                    # DTOs: LoginRequest, AuthResponse
+│       ├── model/                  # Entidad Usuario y Enums de Roles (ADMIN, USER)
+│       ├── repository/             # UsuarioRepository (Spring Data JPA)
+│       ├── security/               # JwtProvider (firma y validación HMAC-SHA256)
+│       └── service/                # Lógica de autenticación y cifrado
+│
+├── product-service/                # Módulo de Dominio: Catálogo & Inventario
+│   └── src/main/java/miguel/product/
+│       ├── bootstrap/              # Semillado de catálogo inicial y códigos de barras
+│       ├── controller/             # Endpoints /api/productos (búsqueda rápida, lector de barras, CRUD)
+│       ├── dto/                    # ProductoDTO
+│       ├── model/                  # Entidad Producto
+│       ├── repository/             # ProductoRepository
+│       └── service/                # Servicio de catálogo y validación de inventario
+│
+└── sales-service/                  # Módulo de Dominio: Ventas, Facturación & Stock
+    ├── src/main/java/miguel/sales/
+    │   ├── controller/             # Endpoints /api/sales (checkout, transacciones)
+    │   ├── dto/                    # SaleRequest, SaleItemRequest
+    │   ├── model/                  # Entidades Sale, SaleItem, Invoice
+    │   ├── repository/             # Repositorios JPA de transacciones y comprobantes
+    │   └── service/                # Descuento atómico de stock y generación de facturas PDF
+    └── src/test/java/miguel/sales/ # Pruebas unitarias de generación de comprobantes PDF
+```
+
+---
+
 ## 🚀 Tecnologías Clave
 
 ### Backend
@@ -109,7 +160,7 @@ Si necesitas editar el código en vivo (`hot reload`), es recomendable no usar D
 3.  **Iniciar Frontend (Vite):**
     Abre una nueva terminal.
     ```bash
-    cd frontend
+    cd ../marketcali-react
     npm install
     npm run dev
     ```
