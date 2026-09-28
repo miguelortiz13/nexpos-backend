@@ -68,8 +68,8 @@ flowchart LR
 ## 3. Flujo de Trabajo en Control de Versiones (GitFlow)
 
 El desarrollo se gestiona en dos repositorios desacoplados:
-*   `marketcali-backend`: Código de los módulos Spring Boot, migraciones y Dockerfile.
-*   `marketcali-react`: Aplicación cliente SPA, assets y configuración Nginx.
+*   `nexpos-backend`: Código de los módulos Spring Boot, migraciones Flyway y Dockerfile.
+*   `nexpos-frontend`: Aplicación cliente SPA, assets y configuración Nginx.
 
 ### Ramas y Convenciones
 *   `main` / `master`: Código en estado de producción desplegable.
@@ -122,7 +122,7 @@ sequenceDiagram
     Note over CI: Fase 1: Linting & Static Analysis
     Note over CI: Fase 2: Maven Test (Backend) + npm run build (Frontend)
     Note over CI: Fase 3: Docker Build & Vulnerability Scan
-    CI->>Reg: docker push <acr>.azurecr.io/marketcali-backend:latest
+    CI->>Reg: docker push <acr>.azurecr.io/nexpos-backend:latest
     CI->>Cloud: Trigger Rolling Deployment (Zero Downtime)
     Cloud-->>Dev: Notificación de Despliegue Exitoso
 ```

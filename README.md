@@ -9,7 +9,7 @@
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-**NexPOS Backend** es el motor transaccional de punto de venta (POS) y gestión comercial multirrubro (supermercados, droguerías, ferreterías, tiendas de conveniencia y retail general). Diseñado bajo el patrón arquitectónico de **Monolito Modular**, combina la cohesión de dominios de negocio desacoplados con la simplicidad de despliegue, monitoreo y mantenimiento de un único artefacto de ejecución. *(Nombre de código del repositorio: marketcali-backend)*.
+**NexPOS Backend** es el motor transaccional de punto de venta (POS) y gestión comercial multirrubro (supermercados, droguerías, ferreterías, tiendas de conveniencia y retail general). Diseñado bajo el patrón arquitectónico de **Monolito Modular**, combina la cohesión de dominios de negocio desacoplados con la simplicidad de despliegue, monitoreo y mantenimiento de un único artefacto de ejecución.
 
 > 📚 **Documentación Estratégica Completa:**
 > - [📘 Guía Maestra del Ciclo de Vida de Desarrollo de Software (SDLC)](docs/SDLC_GUIDE.md)
@@ -109,7 +109,7 @@ graph TB
 El repositorio sigue las directrices oficiales de Maven para proyectos multi-módulo:
 
 ```
-marketcali-backend/
+nexpos-backend/
 ├── pom.xml                                  # POM raíz: Dependency Management, plugins y módulos
 ├── docker-compose.yml                       # Orquestador local multicontenedor
 ├── docker/
@@ -443,8 +443,8 @@ Esta opción levanta todo el entorno (Base de Datos MySQL, Monolito Spring Boot 
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/miguelortiz13/marketcali-backend.git
-cd marketcali-backend
+git clone https://github.com/miguelortiz13/nexpos-backend.git
+cd nexpos-backend
 
 # 2. Levantar los servicios y compilar las imágenes
 docker compose up -d --build
@@ -491,7 +491,7 @@ Si deseas depurar el backend en tu IDE (IntelliJ IDEA, Eclipse, VS Code) con Hot
 3. **Ejecutar el Frontend en Modo Desarrollo**:
    En una terminal independiente dentro de la carpeta del frontend:
    ```bash
-   cd ../marketcali-react
+   cd ../nexpos-frontend
    npm install
    npm run dev
    ```

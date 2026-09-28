@@ -1,10 +1,10 @@
-# 🚀 Visión Estratégica, Roadmap Comercial & Propuesta de Valor - MarketCali
+# 🚀 Visión Estratégica, Roadmap Comercial & Propuesta de Valor - NexPOS
 
-[![Business Ready](https://img.shields.io/badge/Commercial%20Status-Ready%20for%20Pilot-brightgreen?style=for-the-badge)](https://github.com/miguelortiz13/marketcali-backend)
-[![Target Market](https://img.shields.io/badge/Target%20Market-Retail%20%7C%20Supermercados%20%7C%20Minimarkets-blue?style=for-the-badge)](#)
+[![Business Ready](https://img.shields.io/badge/Commercial%20Status-Ready%20for%20Pilot-brightgreen?style=for-the-badge)](https://github.com/miguelortiz13/nexpos-backend)
+[![Target Market](https://img.shields.io/badge/Target%20Market-Retail%20%7C%20Supermercados%20%7C%20Droguer%C3%ADas%20%7C%20Comercio-blue?style=for-the-badge)](#)
 [![Compliance](https://img.shields.io/badge/Regulatory%20Target-DIAN%20Colombia%20Ready-yellow?style=for-the-badge)](#)
 
-Este documento detalla la **visión de negocio, la propuesta de valor real, la estrategia de comercialización y la hoja de ruta técnica** para escalar **MarketCali** desde su estado actual de plataforma operativa hasta convertirse en una solución comercial de clase empresarial (**SaaS Retail POS**) altamente rentable en Colombia y América Latina.
+Este documento detalla la **visión de negocio, la propuesta de valor real, la estrategia de comercialización y la hoja de ruta técnica** para escalar **NexPOS** desde su estado actual de plataforma operativa hasta convertirse en una solución comercial de clase empresarial (**SaaS Retail POS**) altamente rentable en Colombia y América Latina.
 
 ---
 

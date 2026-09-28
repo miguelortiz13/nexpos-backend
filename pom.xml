@@ -9,11 +9,11 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>miguel</groupId>
-    <artifactId>marketcali-backend</artifactId>
+    <artifactId>nexpos-backend</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>marketcali-backend</name>
-    <description>MarketCali Modular Monolith System</description>
+    <name>nexpos-backend</name>
+    <description>NexPOS Modular Monolith System</description>
     
     <modules>
         <module>auth-service</module>
