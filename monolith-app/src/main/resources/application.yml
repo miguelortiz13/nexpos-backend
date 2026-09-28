@@ -5,22 +5,23 @@ spring:
   application:
     name: marketcali-monolith
   datasource:
-    url: jdbc:mysql://mysql-db:3306/marketcali_db
-    username: miguel
-    password: 12345
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/marketcali_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:miguel}
+    password: ${SPRING_DATASOURCE_PASSWORD:12345}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: false
 
 jwt:
-  secret: 4GJW5A9H8HFW5D3AS7CZF1T9E3D6B5A18C3B8H4D1F0E # same as before if any, else this default
-  expiration: 86400000
+  secret: ${JWT_SECRET:QzNaTzh0ZXN0c2VjcmV0a2V5Zm9ybWFya2V0Y2FsaXNlY3VyaXR5MTIzNDU2Nzg5MA==}
+  expiration: ${JWT_EXPIRATION:86400000}
 
 logging:
   level:
-    org.springframework.security: DEBUG
+    org.springframework.security: INFO

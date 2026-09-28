@@ -1,14 +1,4 @@
 services:
-  monolith-app:
-    build: ./monolith-app
-    ports:
-      - "8088:8088"
-    environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/marketcali_db
-    depends_on:
-      - mysql-db
-
   mysql-db:
     image: mysql:8.0
     ports:
@@ -21,11 +11,36 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  monolith-app:
+    build:
+      context: .
+      dockerfile: ./monolith-app/Dockerfile
+    ports:
+      - "8088:8088"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/marketcali_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=miguel
+      - SPRING_DATASOURCE_PASSWORD=12345
+      - JWT_SECRET=QzNaTzh0ZXN0c2VjcmV0a2V5Zm9ybWFya2V0Y2FsaXNlY3VyaXR5MTIzNDU2Nzg5MA==
+    restart: on-failure
+    depends_on:
+      mysql-db:
+        condition: service_healthy
 
   frontend:
-    build: ./frontend
+    build:
+      context: ../marketcali-react
+      dockerfile: Dockerfile
     ports:
       - "80:80"
+    restart: on-failure
     depends_on:
       - monolith-app
 

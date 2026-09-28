@@ -34,14 +34,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (token != null && jwtProvider.validateToken(token)) {
             String username = jwtProvider.getUsernameFromToken(token);
-            
-            Optional<Usuario> userOpt = authService.findByUsername(username);
-            
-            if (userOpt.isPresent()) {
-                Usuario user = userOpt.get();
-                // Add ROLE_ prefix as Spring Security expects it for hasRole('ADMIN')
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().toUpperCase());
-                
+            String role = jwtProvider.getRoleFromToken(token);
+
+            if (username != null) {
+                // Si el token no incluye el role, lo consulta de la base de datos como fallback
+                if (role == null || role.isBlank()) {
+                    Optional<Usuario> userOpt = authService.findByUsername(username);
+                    role = userOpt.map(Usuario::getRole).orElse("USER");
+                }
+
+                String roleName = role.toUpperCase();
+                if (!roleName.startsWith("ROLE_")) {
+                    roleName = "ROLE_" + roleName;
+                }
+
+                SimpleGrantedAuthority authority = new SimpleGrantedAuthority(roleName);
                 UserDetails userDetails = new User(username, "", Collections.singletonList(authority));
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
