@@ -2,12 +2,20 @@
 
 [![Java 17](https://img.shields.io/badge/Java-17%20LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![Spring Boot 3.2.5](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Swagger UI](https://img.shields.io/badge/Swagger-OpenAPI%203-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](http://localhost/swagger-ui/index.html)
+[![Flyway](https://img.shields.io/badge/Flyway-Migrations%20Active-CC0200?style=for-the-badge&logo=flyway&logoColor=white)](https://flywaydb.org/)
 [![MySQL 8.0](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
 **MarketCali Backend** es el motor transaccional de gestión comercial e inventario para supermercados, cadenas de minimarkets y tiendas de conveniencia. Diseñado bajo el patrón arquitectónico de **Monolito Modular**, combina la cohesión de dominios de negocio desacoplados con la simplicidad de despliegue, monitoreo y mantenimiento de un único artefacto de ejecución.
+
+> 📚 **Documentación Estratégica Completa:**
+> - [📘 Guía Maestra del Ciclo de Vida de Desarrollo de Software (SDLC)](docs/SDLC_GUIDE.md)
+> - [🚀 Visión Comercial, Hoja de Ruta & Cumplimiento DIAN](docs/COMMERCIAL_ROADMAP.md)
+> - [🧪 Swagger UI Interactivo (API Viva)](http://localhost/swagger-ui/index.html)
+> - [🩺 Estado del Sistema en Vivo (Actuator Health)](http://localhost/actuator/health)
 
 ---
 
@@ -16,13 +24,16 @@
 - [Visión General & Valor de Negocio](#-visión-general--valor-de-negocio)
 - [Arquitectura del Sistema](#-arquitectura-del-sistema)
 - [Estructura del Proyecto y Módulos](#-estructura-del-proyecto-y-módulos)
+- [Migraciones de Base de Datos con Flyway](#-migraciones-de-base-de-datos-con-flyway)
 - [Modelado de Datos & Base de Datos](#-modelado-de-datos--base-de-datos)
+- [Documentación Interactiva Swagger / OpenAPI 3](#-documentación-interactiva-swagger--openapi-3)
 - [Referencia Completa de la API REST](#-referencia-completa-de-la-api-rest)
 - [Instalación y Puesta en Marcha](#-instalación-y-puesta-en-marcha)
   - [Opción 1: Docker Compose (Recomendado)](#opción-1-docker-compose-recomendado)
   - [Opción 2: Entorno Local de Desarrollo](#opción-2-entorno-local-de-desarrollo)
 - [Variables de Entorno y Configuración](#-variables-de-entorno-y-configuración)
 - [Seguridad & Control de Acceso (RBAC)](#-seguridad--control-de-acceso-rbac)
+- [Salud, Métricas y Monitoreo (Actuator)](#-salud-métricas-y-monitoreo-actuator)
 - [Pruebas Automatizadas y Calidad](#-pruebas-automatizadas-y-calidad)
 - [Despliegue Cloud en Azure con Terraform](#-despliegue-cloud-en-azure-con-terraform)
 - [Roadmap Comercial](#-roadmap-comercial)
@@ -155,6 +166,17 @@ marketcali-backend/
 
 ---
 
+## 🗃️ Migraciones de Base de Datos con Flyway
+
+El backend gestiona la evolución del esquema relacional mediante **Flyway**, garantizando migraciones deterministas y consistentes entre entornos:
+
+- **`V1__initial_schema.sql`**: Definición DDL normalizada de las tablas de negocio (`usuarios`, `productos`, `sales`, `sale_items`, `invoices`) con restricciones de integridad referencial.
+- **`V2__add_performance_indexes.sql`**: Índices B-Tree optimizados para el escáner de códigos de barra (`idx_productos_codigo_barras`), consultas cronológicas de ventas (`idx_sales_sale_date`) y búsqueda de comprobantes (`idx_invoices_number`).
+
+Al inicializar la aplicación, Spring Boot aplica automáticamente los scripts pendientes y mantiene la tabla de auditoría `flyway_schema_history`.
+
+---
+
 ## 🗄️ Modelado de Datos & Base de Datos
 
 El sistema utiliza un esquema relacional normalizado alojado en la base de datos `marketcali_db`.
@@ -224,6 +246,21 @@ Al arrancar por primera vez, el sistema inyecta automáticamente:
   - Contraseña: `admin`
   - Rol: `ADMIN`
 - **Catálogo de Productos Inicial**: 10 productos con códigos de barra válidos (Arroz Diana, Leche Alquería, Aceite Premier, Café Sello Rojo, etc.) listos para probar el escáner POS de inmediato.
+
+---
+
+## 🧪 Documentación Interactiva Swagger / OpenAPI 3
+
+El backend expone la especificación OpenAPI 3 y una interfaz gráfica interactiva para pruebas:
+
+*   **Swagger UI**: **[http://localhost/swagger-ui/index.html](http://localhost/swagger-ui/index.html)** (o en `:8088/swagger-ui/index.html`)
+*   **Especificación OpenAPI v3 (JSON)**: `http://localhost/v3/api-docs`
+
+> 🔑 **Cómo probar endpoints autenticados en Swagger:**
+> 1. Ejecuta el endpoint `POST /auth/login` con usuario `admin` y contraseña `admin`.
+> 2. Copia el token de la respuesta.
+> 3. En la parte superior de la página de Swagger, haz clic en el botón verde **Authorize**.
+> 4. Pega el token y haz clic en **Authorize**. A partir de ese momento, todas las peticiones protegidas viajarán con la cabecera `Authorization: Bearer <token>`.
 
 ---
 
@@ -488,6 +525,17 @@ Toda la configuración se encuentra centralizada en `monolith-app/src/main/resou
    - Las contraseñas de los usuarios nunca se almacenan en texto claro; se procesan mediante `BCryptPasswordEncoder` con factor de coste 10.
 3. **Manejo Uniforme de Excepciones**:
    - `GlobalExceptionHandler` intercepta validaciones fallidas (`MethodArgumentNotValidException`) y errores de regla de negocio (`RuntimeException`) devolviendo siempre un payload JSON normalizado con código HTTP apropiado.
+
+---
+
+## 🩺 Salud, Métricas y Monitoreo (Actuator)
+
+El backend integra **Spring Boot Actuator** para monitoreo y telemetría en tiempo real:
+
+*   **Verificación de Salud (Healthcheck)**: **[http://localhost/actuator/health](http://localhost/actuator/health)**
+    *   Verifica automáticamente el estado de la conexión con la base de datos MySQL (`validationQuery: isValid()`), disponibilidad de espacio en disco y tiempo de actividad del proceso.
+*   **Métricas del Sistema**: `http://localhost/actuator/metrics`
+    *   Permite inspeccionar consumo de memoria Heap JVM (`jvm.memory.used`), hilos activos de Tomcat y uso del pool de conexiones HikariCP.
 
 ---
 

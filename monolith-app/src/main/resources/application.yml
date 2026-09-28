@@ -17,6 +17,31 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+
+# Actuator Health & Metrics
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics"
+  endpoint:
+    health:
+      show-details: always
+
+# OpenAPI / Swagger UI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
 
 jwt:
   secret: ${JWT_SECRET:QzNaTzh0ZXN0c2VjcmV0a2V5Zm9ybWFya2V0Y2FsaXNlY3VyaXR5MTIzNDU2Nzg5MA==}
@@ -25,3 +50,4 @@ jwt:
 logging:
   level:
     org.springframework.security: INFO
+    org.flywaydb: INFO

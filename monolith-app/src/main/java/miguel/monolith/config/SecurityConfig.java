@@ -31,6 +31,17 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Documentación Swagger / OpenAPI 3
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll()
+                        // Monitoreo y Salud Actuator
+                        .requestMatchers("/actuator/**").permitAll()
                         // Autenticación pública
                         .requestMatchers("/auth/**").permitAll()
                         // Catálogo de productos: lectura pública, mutación solo ADMIN
