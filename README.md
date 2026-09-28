@@ -1,4 +1,4 @@
-# 🛒 MarketCali - Backend System (Modular Monolith)
+# ⚡ NexPOS - Backend System (Modular Monolith)
 
 [![Java 17](https://img.shields.io/badge/Java-17%20LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![Spring Boot 3.2.5](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -9,7 +9,7 @@
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-**MarketCali Backend** es el motor transaccional de gestión comercial e inventario para supermercados, cadenas de minimarkets y tiendas de conveniencia. Diseñado bajo el patrón arquitectónico de **Monolito Modular**, combina la cohesión de dominios de negocio desacoplados con la simplicidad de despliegue, monitoreo y mantenimiento de un único artefacto de ejecución.
+**NexPOS Backend** es el motor transaccional de punto de venta (POS) y gestión comercial multirrubro (supermercados, droguerías, ferreterías, tiendas de conveniencia y retail general). Diseñado bajo el patrón arquitectónico de **Monolito Modular**, combina la cohesión de dominios de negocio desacoplados con la simplicidad de despliegue, monitoreo y mantenimiento de un único artefacto de ejecución. *(Nombre de código del repositorio: marketcali-backend)*.
 
 > 📚 **Documentación Estratégica Completa:**
 > - [📘 Guía Maestra del Ciclo de Vida de Desarrollo de Software (SDLC)](docs/SDLC_GUIDE.md)

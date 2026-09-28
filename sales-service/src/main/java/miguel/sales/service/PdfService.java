@@ -26,14 +26,14 @@ public class PdfService {
 
         document.open();
 
-        // Encabezado Supermercado
-        Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, new Color(41, 128, 185));
-        Paragraph title = new Paragraph("MARKETCALI SUPERMERCADO", headerFont);
+        // Encabezado Punto de Venta
+        Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20, new Color(5, 150, 105));
+        Paragraph title = new Paragraph("NEXPOS RETAIL & COMMERCE", headerFont);
         title.setAlignment(Element.ALIGN_CENTER);
         document.add(title);
 
         Font subHeaderFont = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.DARK_GRAY);
-        Paragraph subTitle = new Paragraph("NIT: 900.123.456-7 | Cali, Colombia\nFactura de Venta POS", subHeaderFont);
+        Paragraph subTitle = new Paragraph("NIT: 900.123.456-7 | Sistema de Gestión Comercial\nComprobante de Venta POS", subHeaderFont);
         subTitle.setAlignment(Element.ALIGN_CENTER);
         document.add(subTitle);
 
@@ -102,7 +102,7 @@ public class PdfService {
         // Pie de página
         document.add(Chunk.NEWLINE);
         Font footerFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9, Color.GRAY);
-        Paragraph footer = new Paragraph("¡Gracias por su compra en MarketCali! Conserve esta factura para cualquier reclamo o garantía.", footerFont);
+        Paragraph footer = new Paragraph("¡Gracias por su compra! Comprobante emitido por NexPOS Retail.", footerFont);
         footer.setAlignment(Element.ALIGN_CENTER);
         document.add(footer);
 

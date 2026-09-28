@@ -19,11 +19,11 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("🛒 MarketCali - Retail & POS API")
-                        .description("API RESTful para la plataforma de gestión de supermercados MarketCali. " +
+                        .title("⚡ NexPOS - Retail & Point of Sale API")
+                        .description("API RESTful para la plataforma de punto de venta (POS) y gestión comercial multirrubro NexPOS. " +
                                 "Provee servicios de autenticación JWT (RBAC), control de inventario con búsqueda por código de barras, " +
                                 "terminal de punto de venta (POS) transaccional con descuento atómico de existencias y emisión de facturas en PDF.")
-                        .version("1.0.0")
+                        .version("2.0.0")
                         .contact(new Contact()
                                 .name("Miguel Ángel Ortiz Escobar")
                                 .url("https://github.com/miguelortiz13")

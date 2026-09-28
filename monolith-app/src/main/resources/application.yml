@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: marketcali-monolith
+    name: nexpos-monolith
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3307/marketcali_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true}
     username: ${SPRING_DATASOURCE_USERNAME:miguel}
