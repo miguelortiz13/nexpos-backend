@@ -23,8 +23,26 @@ public class Sale {
     private Long id;
 
     private LocalDateTime saleDate;
+
     private Long customerId;
+
+    @Column(length = 150)
+    private String customerName;
+
+    @Column(length = 50)
+    private String customerDoc;
+
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
+
+    @Column(length = 30)
+    private String paymentMethod; // EFECTIVO, TARJETA, TRANSFERENCIA, MIXTO
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal amountPaid;
+
+    @Column(precision = 12, scale = 2)
+    private BigDecimal changeAmount;
 
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<SaleItem> items;
