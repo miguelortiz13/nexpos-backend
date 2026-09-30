@@ -44,6 +44,12 @@ public class Sale {
     @Column(precision = 12, scale = 2)
     private BigDecimal changeAmount;
 
+    @Column(name = "cash_shift_id")
+    private Long cashShiftId;
+
+    @Column(name = "cashier_username", length = 100)
+    private String cashierUsername;
+
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<SaleItem> items;
 }

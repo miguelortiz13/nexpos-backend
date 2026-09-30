@@ -53,6 +53,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         // Ventas y facturación: usuarios autenticados (cajeros y admin)
                         .requestMatchers("/api/sales/**").authenticated()
+                        // Control de caja y turnos: usuarios autenticados (cajeros y admin)
+                        .requestMatchers("/api/cash-shifts/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 

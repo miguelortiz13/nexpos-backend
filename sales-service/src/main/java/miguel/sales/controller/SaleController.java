@@ -24,8 +24,9 @@ public class SaleController {
     private final PdfService pdfService;
 
     @PostMapping
-    public ResponseEntity<Sale> createSale(@RequestBody SaleRequest request) {
-        return new ResponseEntity<>(saleService.createSale(request), HttpStatus.CREATED);
+    public ResponseEntity<Sale> createSale(@RequestBody SaleRequest request, java.security.Principal principal) {
+        String cashier = (principal != null) ? principal.getName() : "cajero_pos";
+        return new ResponseEntity<>(saleService.createSale(request, cashier), HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")

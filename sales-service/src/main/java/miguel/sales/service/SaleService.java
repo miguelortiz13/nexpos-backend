@@ -26,9 +26,15 @@ public class SaleService {
     private final SaleRepository saleRepository;
     private final InvoiceRepository invoiceRepository;
     private final ProductoRepository productoRepository;
+    private final CashShiftService cashShiftService;
 
     @Transactional
     public Sale createSale(SaleRequest request) {
+        return createSale(request, "cajero_pos");
+    }
+
+    @Transactional
+    public Sale createSale(SaleRequest request, String cashierUsername) {
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("La venta debe contener al menos un producto.");
         }
@@ -100,6 +106,7 @@ public class SaleService {
         BigDecimal change = amountPaid.subtract(calculatedTotal).max(BigDecimal.ZERO);
         sale.setAmountPaid(amountPaid);
         sale.setChangeAmount(change);
+        sale.setCashierUsername(cashierUsername != null ? cashierUsername : "cajero_pos");
 
         Sale savedSale = saleRepository.save(sale);
 
@@ -110,6 +117,9 @@ public class SaleService {
                 .sale(savedSale)
                 .build();
         invoiceRepository.save(invoice);
+
+        // 6. Vinculación y acumulación en el turno de caja activo
+        cashShiftService.addSaleToActiveShift(cashierUsername, savedSale);
 
         return savedSale;
     }
