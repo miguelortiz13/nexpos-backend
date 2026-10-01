@@ -1,15 +1,15 @@
-# Marketcali Azure Infrastructure (Modular Monolith)
+# NexPOS Azure Infrastructure (Modular Monolith)
 
-Este directorio contiene la Infraestructura como Código (IaC) en Terraform para desplegar el proyecto Marketcali en **Microsoft Azure** utilizando **Azure Container Apps (ACA)**.
+Este directorio contiene la Infraestructura como Código (IaC) en Terraform para desplegar el proyecto NexPOS en **Microsoft Azure** utilizando **Azure Container Apps (ACA)**.
 
 Esta infraestructura está diseñada para soportar la arquitectura de **Monolito Modular** del proyecto, simplificando el despliegue al reemplazar Kubernetes y API Gateway por servicios administrados más ligeros e integrados.
 
 ## Arquitectura Creada
 
-1. **Resource Group:** Grupo de recursos lógico en Azure.
+1. **Resource Group:** Grupo de recursos lógico en Azure (`rg-nexpos-prod`).
 2. **Virtual Network (VNet) y Subnets:** Redes privadas para los servicios de backend, bases de datos y el entorno de ACA.
 3. **Azure Container Registry (ACR):** Repositorio privado para hospedar tus imágenes de Docker (`monolith-app` y `frontend`).
-4. **Azure Database for MySQL (Flexible Server):** Base de datos relacional administrada y segura, con la base de datos unificada `marketcali_db` creada automáticamente.
+4. **Azure Database for MySQL (Flexible Server):** Base de datos relacional administrada y segura, con la base de datos unificada `nexpos_db` creada automáticamente.
 5. **Log Analytics Workspace:** Espacio de trabajo centralizado para monitoreo y recolección de logs de todos los servicios.
 6. **Azure Container Apps Environment:** Entorno serverless donde se despliegan los contenedores, compartiendo la misma red virtual y espacio de trabajo de loggings.
 7. **Azure Container Apps:** Micro-entornos escalables para alojar la aplicación Spring Boot (`monolith-app`) y la aplicación React (`frontend`).
@@ -58,12 +58,12 @@ az acr login --name <TU_ACR_NAME>
 cd ..
 
 # 1. Construir y subir el Monolito Backend
-docker build -t <acr_login_server>/monolith-app:latest ./monolith-app
+docker build -f monolith-app/Dockerfile -t <acr_login_server>/monolith-app:latest .
 docker push <acr_login_server>/monolith-app:latest
 
 # 2. Construir y subir el Frontend
-# Nota: La configuración de ACA ya le inyecta la variable de entorno del backend al contenedor.
-docker build -t <acr_login_server>/frontend:latest ./frontend
+cd ../nexpos-frontend
+docker build -t <acr_login_server>/frontend:latest .
 docker push <acr_login_server>/frontend:latest
 ```
 
@@ -75,13 +75,13 @@ Si las Container Apps estaban intentando arrancar contenedores vacíos, al detec
 
 ```bash
 az containerapp update \
-  --name ca-monolith-marketcali-prod \
-  --resource-group rg-marketcali-prod \
+  --name ca-monolith-nexpos-prod \
+  --resource-group rg-nexpos-prod \
   --image <acr_login_server>/monolith-app:latest
 
 az containerapp update \
-  --name ca-frontend-marketcali-prod \
-  --resource-group rg-marketcali-prod \
+  --name ca-frontend-nexpos-prod \
+  --resource-group rg-nexpos-prod \
   --image <acr_login_server>/frontend:latest
 ```
 *(Asegúrate de cambiar los sufijos `-prod` por el ambiente que utilizaste y el nombre de los Resource Groups correctos).*

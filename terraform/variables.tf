@@ -1,7 +1,7 @@
 variable "project_name" {
   description = "The name of the project"
   type        = string
-  default     = "marketcali"
+  default     = "nexpos"
 }
 
 variable "location" {
@@ -16,10 +16,16 @@ variable "environment" {
   default     = "prod"
 }
 
+variable "database_name" {
+  description = "The database name in MySQL"
+  type        = string
+  default     = "nexpos_db"
+}
+
 variable "mysql_admin_username" {
   description = "The administrator username of the MySQL Database"
   type        = string
-  default     = "marketcali_admin"
+  default     = "nexpos_admin"
 }
 
 variable "mysql_admin_password" {

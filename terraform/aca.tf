@@ -46,7 +46,7 @@ resource "azurerm_container_app" "monolith_app" {
 
   secret {
     name  = "mysql-connection-url"
-    value = "jdbc:mysql://${azurerm_mysql_flexible_server.mysql.fqdn}:3306/marketcali_db"
+    value = "jdbc:mysql://${azurerm_mysql_flexible_server.mysql.fqdn}:3306/${var.database_name}"
   }
 
   template {
@@ -73,7 +73,7 @@ resource "azurerm_container_app" "monolith_app" {
         value = var.mysql_admin_password
       }
     }
-    
+
     min_replicas = 1
     max_replicas = 5
   }
@@ -91,7 +91,7 @@ resource "azurerm_container_app" "monolith_app" {
 
   # Dependency to ensure DB is created first
   depends_on = [
-    azurerm_mysql_flexible_database.marketcali_db
+    azurerm_mysql_flexible_database.nexpos_db
   ]
 }
 
@@ -119,14 +119,14 @@ resource "azurerm_container_app" "frontend_app" {
       image  = "${azurerm_container_registry.acr.login_server}/frontend:latest"
       cpu    = 0.5
       memory = "1.0Gi"
-      
+
       env {
         # Expose the API URL to the frontend build
         name  = "VITE_API_BASE_URL"
         value = "https://${azurerm_container_app.monolith_app.ingress[0].fqdn}"
       }
     }
-    
+
     min_replicas = 1
     max_replicas = 5
   }

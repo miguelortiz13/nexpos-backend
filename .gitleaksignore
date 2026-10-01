@@ -1,0 +1,7 @@
+# Known historical mock development secrets & test tokens
+f73cf1e257a028965a5e791b2821300400d0ad7c:README.md:generic-api-key:249
+aa7a8e9fd7def1df37e1d4c4efbb20323eb45cb7:auth-service/src/main/java/miguel/auth/security/JwtProvider.java:generic-api-key:14
+5d91c409c63a39386facc85cbf616d2f9dbdd553:docker-compose.yml:generic-api-key:31
+29a9cc1bb4a61a1eaff5f84b8e3cc69695ae34a5:monolith-app/src/main/resources/application.yml:generic-api-key:21
+6a37233522faed941d364c67da83f7082d2dac09:terraform/aca.tf:hashicorp-tf-password:39
+6a37233522faed941d364c67da83f7082d2dac09:terraform/aca.tf:hashicorp-tf-password:108

@@ -7,17 +7,17 @@ resource "azurerm_mysql_flexible_server" "mysql" {
   administrator_password = var.mysql_admin_password
   sku_name               = "B_Standard_B1ms" # Burstable tier is cost-effective for dev/small workloads
   version                = "8.0.21"
-  
-  delegated_subnet_id    = azurerm_subnet.mysql_subnet.id
-  private_dns_zone_id    = azurerm_private_dns_zone.mysql_dns.id
+
+  delegated_subnet_id = azurerm_subnet.mysql_subnet.id
+  private_dns_zone_id = azurerm_private_dns_zone.mysql_dns.id
 
   # Dependencies
   depends_on = [azurerm_private_dns_zone_virtual_network_link.mysql_dns_link]
 }
 
 # The primary database used by the monolith
-resource "azurerm_mysql_flexible_database" "marketcali_db" {
-  name                = "marketcali_db"
+resource "azurerm_mysql_flexible_database" "nexpos_db" {
+  name                = var.database_name
   resource_group_name = azurerm_resource_group.rg.name
   server_name         = azurerm_mysql_flexible_server.mysql.name
   charset             = "utf8"
