@@ -1,5 +1,6 @@
 # ⚡ NexPOS - Backend System (Modular Monolith)
 
+[![CI Pipeline](https://github.com/miguelortiz13/nexpos-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/miguelortiz13/nexpos-backend/actions/workflows/ci.yml)
 [![Java 17](https://img.shields.io/badge/Java-17%20LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![Spring Boot 3.2.5](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Swagger UI](https://img.shields.io/badge/Swagger-OpenAPI%203-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](http://localhost/swagger-ui/index.html)
