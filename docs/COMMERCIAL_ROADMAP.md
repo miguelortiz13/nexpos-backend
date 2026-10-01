@@ -31,7 +31,7 @@ En el comercio minorista tradicional (supermercados independientes, minimarkets 
 2. **Lentitud en caja registradora**: Filas excesivas en horas pico por sistemas obsoletos que exigen teclear códigos manualmente.
 3. **Sanciones tributarias**: Incumplimiento de las normativas de facturación electrónica y expedición de tiquetes equivalentes POS.
 
-### ¿Cómo aporta valor real MarketCali hoy?
+### ¿Cómo aporta valor real NexPOS hoy?
 *   **Velocidad Extrema de Cobro**: Soporte directo de escáneres de código de barras USB/Bluetooth en modo ráfaga (<50ms por lectura) sin obligar al cajero a enfocar la pantalla.
 *   **Aislamiento y Consistencia Transaccional**: Deducción atómica de inventario que impide vender stock fantasma.
 *   **Comprobantes Fiscales Inmediatos**: Generación automática de comprobantes en PDF listos para imprimir en impresoras térmicas.
@@ -43,15 +43,15 @@ En el comercio minorista tradicional (supermercados independientes, minimarkets 
 
 ```mermaid
 graph TD
-    MarketCali["Plataforma MarketCali"]
+    NexPOS["Plataforma NexPOS"]
     
     T1["Segmento 1: Minimarkets y Tiendas de Conveniencia (1 a 3 cajas)"]
     T2["Segmento 2: Supermercados Independientes y Fruterías (3 a 8 cajas)"]
     T3["Segmento 3: Cadenas de Droguerías y Licoreras (Múltiples sedes)"]
 
-    MarketCali --> T1
-    MarketCali --> T2
-    MarketCali --> T3
+    NexPOS --> T1
+    NexPOS --> T2
+    NexPOS --> T3
 ```
 
 1. **El Dueño o Gerente de Tienda**:
@@ -81,7 +81,7 @@ Tras evaluar alternativas como *The Factory HKA*, *Dataico* y la conexión direc
 sequenceDiagram
     autonumber
     actor Cajero
-    participant POS as Frontend MarketCali (React)
+    participant POS as Frontend NexPOS (React)
     participant Backend as sales-service (Spring Boot)
     participant Factus as API Factus (Proveedor Tecnológico)
     participant DIAN as Servidores DIAN Colombia
@@ -114,7 +114,7 @@ sequenceDiagram
 1. Contar con RUT activo con la responsabilidad tributaria `52` (Facturador Electrónico).
 2. Ingresar al portal de la DIAN (`catalogo-vpfe.dian.gov.co`) y asociar a **Factus** como su Proveedor Tecnológico Autorizado en modo de operación (proceso guiado de 10 minutos).
 3. Solicitar autorización de numeración para Documento Equivalente POS en el sistema Muisca.
-4. Ingresar el Token de API de Factus en el panel de configuración de MarketCali.
+4. Ingresar el Token de API de Factus en el panel de configuración de NexPOS.
 
 ---
 
@@ -150,7 +150,7 @@ En muchas zonas comerciales los cortes de fluido eléctrico o de conexión a int
 
 ```mermaid
 gantt
-    title Cronograma de Evolución Comercial MarketCali
+    title Cronograma de Evolución Comercial NexPOS
     dateFormat  YYYY-MM
     section Fase 1: MVP Comercial
     Estabilización Monolito, Swagger y Métricas :done, 2026-09, 2026-10
@@ -170,7 +170,7 @@ gantt
 
 ## 5. Modelo de Negocio & Estrategia de Monetización
 
-MarketCali puede comercializarse bajo un modelo **SaaS B2B por Suscripción Mensual/Anual**:
+NexPOS puede comercializarse bajo un modelo **SaaS B2B por Suscripción Mensual/Anual**:
 
 | Plan | Tarifa Estimada | Características Incluidas |
 | :--- | :--- | :--- |

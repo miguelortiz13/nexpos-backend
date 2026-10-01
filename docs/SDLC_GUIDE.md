@@ -1,10 +1,10 @@
-# 📘 Guía Maestra del Ciclo de Vida de Desarrollo de Software (SDLC) - MarketCali
+# 📘 Guía Maestra del Ciclo de Vida de Desarrollo de Software (SDLC) - NexPOS
 
 [![SDLC Standard](https://img.shields.io/badge/SDLC-ISO%2F坛%2012207%20Aligned-blue?style=for-the-badge)](https://www.iso.org/standard/63711.html)
 [![Clean Architecture](https://img.shields.io/badge/Architecture-Modular%20Monolith-success?style=for-the-badge)](https://martinfowler.com/)
 [![CI/CD Ready](https://img.shields.io/badge/DevOps-Docker%20%7C%20GitHub%20Actions-orange?style=for-the-badge)](https://github.com/features/actions)
 
-Este documento define la metodología, estándares técnicos, controles de calidad y procesos operativos para todas las fases del ciclo de vida de desarrollo de software (**SDLC - Software Development Life Cycle**) de la plataforma **MarketCali**.
+Este documento define la metodología, estándares técnicos, controles de calidad y procesos operativos para todas las fases del ciclo de vida de desarrollo de software (**SDLC - Software Development Life Cycle**) de la plataforma **NexPOS**.
 
 ---
 
@@ -23,7 +23,7 @@ Este documento define la metodología, estándares técnicos, controles de calid
 
 ## 1. Gobernanza del Ciclo de Vida y Metodología
 
-MarketCali adopta un marco ágil **Scrum/Kanban Híbrido (Scrumban)** con iteraciones de 2 semanas enfocadas en entregables transaccionales de alto valor para el negocio minorista:
+NexPOS adopta un marco ágil **Scrum/Kanban Híbrido (Scrumban)** con iteraciones de 2 semanas enfocadas en entregables transaccionales de alto valor para el negocio minorista:
 
 ```mermaid
 flowchart LR
