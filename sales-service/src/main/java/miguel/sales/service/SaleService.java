@@ -2,7 +2,10 @@ package miguel.sales.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import miguel.product.model.InventoryMovement;
+import miguel.product.model.InventoryMovementType;
 import miguel.product.model.Producto;
+import miguel.product.repository.InventoryMovementRepository;
 import miguel.product.repository.ProductoRepository;
 import miguel.sales.dto.SaleItemRequest;
 import miguel.sales.dto.SaleRequest;
@@ -27,6 +30,7 @@ public class SaleService {
     private final SaleRepository saleRepository;
     private final InvoiceRepository invoiceRepository;
     private final ProductoRepository productoRepository;
+    private final InventoryMovementRepository inventoryMovementRepository;
     private final CashShiftService cashShiftService;
     private final CompanyConfigService companyConfigService;
     private final FactusService factusService;
@@ -128,13 +132,32 @@ public class SaleService {
 
         Sale savedSale = saleRepository.save(sale);
 
-        // 5. Emisión de Factura / Documento Equivalente Electrónico POS ante Factus y DIAN
+        // 5. Registrar movimientos de auditoría en Kardex para cada producto vendido
+        for (SaleItem item : savedSale.getItems()) {
+            Producto prod = productoRepository.findById(item.getProductId()).orElse(null);
+            if (prod != null) {
+                InventoryMovement movement = InventoryMovement.builder()
+                        .product(prod)
+                        .movementType(InventoryMovementType.VENTA)
+                        .quantity(item.getQuantity())
+                        .previousStock(prod.getCantidad() + item.getQuantity())
+                        .newStock(prod.getCantidad())
+                        .unitCost(prod.getCostPrice())
+                        .reason("Venta POS #" + savedSale.getId())
+                        .referenceId(String.valueOf(savedSale.getId()))
+                        .registeredBy(cashierUsername != null ? cashierUsername : "cajero_pos")
+                        .build();
+                inventoryMovementRepository.save(movement);
+            }
+        }
+
+        // 6. Emisión de Factura / Documento Equivalente Electrónico POS ante Factus y DIAN
         String invoiceNumber = companyConfigService.getAndIncrementInvoiceNumber();
         Invoice invoice = factusService.emitElectronicInvoice(savedSale, invoiceNumber);
         Invoice savedInvoice = invoiceRepository.save(invoice);
         savedSale.setInvoice(savedInvoice);
 
-        // 6. Vinculación y acumulación en el turno de caja activo
+        // 7. Vinculación y acumulación en el turno de caja activo
         cashShiftService.addSaleToActiveShift(cashierUsername, savedSale);
 
         return savedSale;

@@ -52,6 +52,15 @@ public class Producto {
     @Builder.Default
     private String unitMeasure = "94"; // 94 = Unidad estándar DIAN, KGM = Kilogramo
 
+    // Control de Inventario y Kardex
+    @Column(name = "min_stock", nullable = false)
+    @Builder.Default
+    private int minStock = 5;
+
+    @Column(name = "cost_price", precision = 38, scale = 2, nullable = false)
+    @Builder.Default
+    private BigDecimal costPrice = BigDecimal.ZERO;
+
     public Producto(String nombre, String marca, BigDecimal precio, int cantidad, String categoria) {
         this.nombre = nombre;
         this.marca = marca;
@@ -60,5 +69,7 @@ public class Producto {
         this.categoria = categoria;
         this.ivaRate = new BigDecimal("0.19");
         this.unitMeasure = "94";
+        this.minStock = 5;
+        this.costPrice = BigDecimal.ZERO;
     }
 }

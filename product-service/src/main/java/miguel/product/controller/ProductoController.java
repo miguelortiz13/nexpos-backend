@@ -72,4 +72,41 @@ public class ProductoController {
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
+
+    // POST: Registrar movimiento de inventario / Kardex (ENTRADA, SALIDA, AJUSTE)
+    @PostMapping("/{id}/movimientos")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<?> registrarMovimiento(
+            @PathVariable Long id,
+            @Valid @RequestBody miguel.product.dto.InventoryMovementRequest request,
+            java.security.Principal principal) {
+        try {
+            String username = principal != null ? principal.getName() : "ADMIN";
+            miguel.product.dto.InventoryMovementDTO movimiento = productoService.registrarMovimiento(id, request, username);
+            return new ResponseEntity<>(movimiento, HttpStatus.CREATED);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
+        }
+    }
+
+    // GET: Obtener historial Kardex de un producto
+    @GetMapping("/{id}/movimientos")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<List<miguel.product.dto.InventoryMovementDTO>> obtenerMovimientosPorProducto(@PathVariable Long id) {
+        return ResponseEntity.ok(productoService.obtenerMovimientosPorProducto(id));
+    }
+
+    // GET: Obtener movimientos recientes globales de inventario
+    @GetMapping("/movimientos")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<miguel.product.dto.InventoryMovementDTO>> obtenerMovimientosRecientes() {
+        return ResponseEntity.ok(productoService.obtenerMovimientosRecientes());
+    }
+
+    // GET: Listar productos con stock crítico (bajo stock o agotados)
+    @GetMapping("/bajo-stock")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<List<Producto>> obtenerProductosBajoStock() {
+        return ResponseEntity.ok(productoService.obtenerProductosBajoStock());
+    }
 }
