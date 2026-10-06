@@ -6,6 +6,7 @@ import miguel.product.model.Producto;
 import miguel.product.repository.ProductoRepository;
 import miguel.sales.dto.SaleItemRequest;
 import miguel.sales.dto.SaleRequest;
+import miguel.sales.model.Customer;
 import miguel.sales.model.Invoice;
 import miguel.sales.model.Sale;
 import miguel.sales.model.SaleItem;
@@ -29,6 +30,7 @@ public class SaleService {
     private final CashShiftService cashShiftService;
     private final CompanyConfigService companyConfigService;
     private final FactusService factusService;
+    private final CustomerService customerService;
 
     @Transactional
     public Sale createSale(SaleRequest request) {
@@ -41,14 +43,21 @@ public class SaleService {
             throw new RuntimeException("La venta debe contener al menos un producto.");
         }
 
+        String doc = (request.getCustomerDoc() != null && !request.getCustomerDoc().isBlank())
+                ? request.getCustomerDoc().trim()
+                : "222222222222";
+        String name = (request.getCustomerName() != null && !request.getCustomerName().isBlank())
+                ? request.getCustomerName().trim()
+                : "Consumidor Final";
+        String email = request.getCustomerEmail() != null ? request.getCustomerEmail().trim() : null;
+
+        Customer customer = customerService.getOrCreateCustomer(doc, name, email, null);
+
         Sale sale = new Sale();
-        sale.setCustomerId(request.getCustomerId() != null ? request.getCustomerId() : 1L);
-        sale.setCustomerName(request.getCustomerName() != null && !request.getCustomerName().isBlank()
-                ? request.getCustomerName()
-                : "Consumidor Final");
-        sale.setCustomerDoc(request.getCustomerDoc() != null && !request.getCustomerDoc().isBlank()
-                ? request.getCustomerDoc()
-                : "222222222222");
+        sale.setCustomerId(customer.getId());
+        sale.setCustomerDoc(customer.getDocNumber());
+        sale.setCustomerName(customer.getName());
+        sale.setCustomerEmail(customer.getEmail());
         sale.setSaleDate(LocalDateTime.now());
 
         String paymentMethod = (request.getPaymentMethod() != null && !request.getPaymentMethod().isBlank())

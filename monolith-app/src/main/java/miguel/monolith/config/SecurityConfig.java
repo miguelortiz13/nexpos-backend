@@ -55,6 +55,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/sales/**").authenticated()
                         // Control de caja y turnos: usuarios autenticados (cajeros y admin)
                         .requestMatchers("/api/cash-shifts/**").authenticated()
+                        // Clientes (directorio y búsqueda POS): usuarios autenticados (cajeros y admin)
+                        .requestMatchers("/api/customers/**").authenticated()
                         // Configuración fiscal de empresa y DIAN / Factus: lectura autenticada, mutación ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/company-config/**").authenticated()
                         .requestMatchers("/api/company-config/**").hasRole("ADMIN")

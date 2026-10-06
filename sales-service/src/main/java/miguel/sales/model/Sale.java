@@ -32,6 +32,9 @@ public class Sale {
     @Column(length = 50)
     private String customerDoc;
 
+    @Column(name = "customer_email", length = 150)
+    private String customerEmail;
+
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
 

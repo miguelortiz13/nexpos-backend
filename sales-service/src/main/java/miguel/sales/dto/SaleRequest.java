@@ -16,6 +16,7 @@ public class SaleRequest {
     private Long customerId;
     private String customerName;
     private String customerDoc;
+    private String customerEmail;
     private String paymentMethod;
     private BigDecimal amountPaid;
     private List<SaleItemRequest> items;
