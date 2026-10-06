@@ -14,10 +14,10 @@ import miguel.sales.repository.SaleRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +27,8 @@ public class SaleService {
     private final InvoiceRepository invoiceRepository;
     private final ProductoRepository productoRepository;
     private final CashShiftService cashShiftService;
+    private final CompanyConfigService companyConfigService;
+    private final FactusService factusService;
 
     @Transactional
     public Sale createSale(SaleRequest request) {
@@ -78,10 +80,14 @@ public class SaleService {
             producto.setCantidad(producto.getCantidad() - itemReq.getQuantity());
             productoRepository.save(producto);
 
-            // 3. Precio oficial de la base de datos (inmune a alteración de precio en el cliente)
+            // 3. Precio oficial y desglose de IVA (inmune a alteración en el cliente)
             BigDecimal unitPrice = producto.getPrecio();
             BigDecimal subTotal = unitPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity()));
             calculatedTotal = calculatedTotal.add(subTotal);
+
+            BigDecimal ivaRate = producto.getIvaRate() != null ? producto.getIvaRate() : new BigDecimal("0.19");
+            BigDecimal baseAmount = subTotal.divide(BigDecimal.ONE.add(ivaRate), 2, RoundingMode.HALF_UP);
+            BigDecimal ivaAmount = subTotal.subtract(baseAmount);
 
             SaleItem item = SaleItem.builder()
                     .productId(producto.getId())
@@ -89,6 +95,9 @@ public class SaleService {
                     .quantity(itemReq.getQuantity())
                     .unitPrice(unitPrice)
                     .subTotal(subTotal)
+                    .ivaRate(ivaRate)
+                    .ivaAmount(ivaAmount)
+                    .baseAmount(baseAmount)
                     .sale(sale)
                     .build();
             items.add(item);
@@ -110,13 +119,11 @@ public class SaleService {
 
         Sale savedSale = saleRepository.save(sale);
 
-        // 5. Generación de factura
-        Invoice invoice = Invoice.builder()
-                .invoiceNumber("FAC-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                .issuedAt(LocalDateTime.now())
-                .sale(savedSale)
-                .build();
-        invoiceRepository.save(invoice);
+        // 5. Emisión de Factura / Documento Equivalente Electrónico POS ante Factus y DIAN
+        String invoiceNumber = companyConfigService.getAndIncrementInvoiceNumber();
+        Invoice invoice = factusService.emitElectronicInvoice(savedSale, invoiceNumber);
+        Invoice savedInvoice = invoiceRepository.save(invoice);
+        savedSale.setInvoice(savedInvoice);
 
         // 6. Vinculación y acumulación en el turno de caja activo
         cashShiftService.addSaleToActiveShift(cashierUsername, savedSale);

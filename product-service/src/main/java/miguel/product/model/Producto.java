@@ -1,22 +1,22 @@
 package miguel.product.model;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
 @Entity
-@Data // Genera getters, setters, toString, etc.
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Table(name = "productos")
 public class Producto {
 
-    // Getters and setters
-    @Setter
-    @Getter
     @Id
-
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -37,24 +37,28 @@ public class Producto {
     @Column(length = 50)
     private String categoria;
 
-    // FALTA IMPLEMENTAR ESTOS ATRIBUTOS AL SERVICE
     @Column(length = 500)
     private String descripcion;
 
     @Column(length = 255)
     private String imagen;
 
-    // Constructor no-arg
-    public Producto() {
-    }
+    // Campos tributarios DIAN
+    @Column(name = "iva_rate", precision = 5, scale = 2, nullable = false)
+    @Builder.Default
+    private BigDecimal ivaRate = new BigDecimal("0.19"); // 0.19, 0.05, 0.00
 
-    // Constructor arg
+    @Column(name = "unit_measure", length = 20, nullable = false)
+    @Builder.Default
+    private String unitMeasure = "94"; // 94 = Unidad estándar DIAN, KGM = Kilogramo
+
     public Producto(String nombre, String marca, BigDecimal precio, int cantidad, String categoria) {
         this.nombre = nombre;
         this.marca = marca;
         this.precio = precio;
         this.cantidad = cantidad;
         this.categoria = categoria;
+        this.ivaRate = new BigDecimal("0.19");
+        this.unitMeasure = "94";
     }
-
 }

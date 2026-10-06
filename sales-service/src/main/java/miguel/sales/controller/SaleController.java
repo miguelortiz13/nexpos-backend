@@ -4,6 +4,7 @@ import com.lowagie.text.DocumentException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import miguel.sales.dto.SaleRequest;
+import miguel.sales.model.Invoice;
 import miguel.sales.model.Sale;
 import miguel.sales.service.PdfService;
 import miguel.sales.service.SaleService;
@@ -52,5 +53,11 @@ public class SaleController {
             os.write(pdfBytes);
             os.flush();
         }
+    }
+
+    @GetMapping("/{id}/electronic-invoice")
+    public ResponseEntity<Invoice> getElectronicInvoice(@PathVariable Long id) {
+        Sale sale = saleService.getSaleById(id);
+        return ResponseEntity.ok(sale.getInvoice());
     }
 }

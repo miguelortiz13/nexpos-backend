@@ -25,5 +25,9 @@ public record ProductoDTO(
 
         String descripcion,
 
-        String imagen
+        String imagen,
+
+        BigDecimal ivaRate, // 0.19, 0.05, 0.00 (opcional, default 0.19)
+
+        String unitMeasure  // 94 = Unidad, KGM = Kilo (opcional, default '94')
 ) {}

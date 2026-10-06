@@ -1,5 +1,6 @@
 package miguel.sales.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,7 +27,21 @@ public class SaleItem {
     private BigDecimal unitPrice;
     private BigDecimal subTotal;
 
+    // Desglose Tributario DIAN
+    @Column(name = "iva_rate", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal ivaRate = new BigDecimal("0.19"); // 0.19, 0.05, 0.00
+
+    @Column(name = "iva_amount", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal ivaAmount = BigDecimal.ZERO;
+
+    @Column(name = "base_amount", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal baseAmount = BigDecimal.ZERO;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sale_id")
+    @JsonIgnore
     private Sale sale;
 }

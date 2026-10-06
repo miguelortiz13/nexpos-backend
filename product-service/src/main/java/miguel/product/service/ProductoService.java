@@ -76,5 +76,11 @@ public class ProductoService {
         producto.setCategoria(dto.categoria());
         producto.setDescripcion(dto.descripcion());
         producto.setImagen(dto.imagen());
+        if (dto.ivaRate() != null) {
+            producto.setIvaRate(dto.ivaRate());
+        }
+        if (dto.unitMeasure() != null && !dto.unitMeasure().isBlank()) {
+            producto.setUnitMeasure(dto.unitMeasure());
+        }
     }
 }
