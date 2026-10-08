@@ -126,4 +126,53 @@ class PdfServiceTest {
         assertNotNull(pdfBytes);
         assertTrue(pdfBytes.length > 0);
     }
+
+    @Test
+    void generateCreditNotePdf_shouldGenerateValidPdfDocument() throws IOException, DocumentException {
+        PdfService pdfService = new PdfService();
+
+        SaleItem item = SaleItem.builder()
+                .productName("Café Especial 500g")
+                .quantity(2)
+                .unitPrice(new BigDecimal("25000.00"))
+                .subTotal(new BigDecimal("50000.00"))
+                .ivaRate(new BigDecimal("0.19"))
+                .ivaAmount(new BigDecimal("7983.19"))
+                .baseAmount(new BigDecimal("42016.81"))
+                .build();
+
+        Sale sale = Sale.builder()
+                .id(10L)
+                .customerId(102L)
+                .customerName("Ana Gomez")
+                .customerDoc("1020304050")
+                .saleDate(LocalDateTime.now())
+                .paymentMethod("EFECTIVO")
+                .totalAmount(new BigDecimal("50000.00"))
+                .items(Collections.singletonList(item))
+                .build();
+
+        miguel.sales.model.CreditNote creditNote = miguel.sales.model.CreditNote.builder()
+                .creditNoteNumber("NC-POS-10")
+                .invoiceNumber("POS-10")
+                .originalCude("sample-original-cude")
+                .cude("sample-nc-cude-sha384-hash")
+                .qrData("https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=sample-nc-cude")
+                .factusStatus("VALIDATED")
+                .reason("Garantía por producto defectuoso")
+                .conceptCode("2")
+                .conceptDescription("Anulación de factura electrónica")
+                .totalAmount(new BigDecimal("50000.00"))
+                .refundCash(new BigDecimal("50000.00"))
+                .refundOther(BigDecimal.ZERO)
+                .createdBy("cajero1")
+                .createdAt(LocalDateTime.now())
+                .dianResponseMessage("Nota Crédito validada exitosamente")
+                .build();
+
+        byte[] pdfBytes = pdfService.generateCreditNotePdf(creditNote, sale);
+
+        assertNotNull(pdfBytes);
+        assertTrue(pdfBytes.length > 0);
+    }
 }

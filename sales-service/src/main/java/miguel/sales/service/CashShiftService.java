@@ -171,6 +171,43 @@ public class CashShiftService {
     }
 
     /**
+     * Procesa la salida de efectivo por devolución o anulación de venta en el turno de caja activo.
+     */
+    @Transactional
+    public void processSaleRefund(String username, Sale sale, BigDecimal refundAmount, String reason) {
+        if (refundAmount == null || refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        Optional<CashShift> shiftOpt = getActiveShift(username);
+        if (shiftOpt.isEmpty()) {
+            return;
+        }
+
+        CashShift shift = shiftOpt.get();
+        if (shift.getExpectedCashAmount().compareTo(refundAmount) < 0) {
+            throw new IllegalArgumentException("Fondos insuficientes en caja: El monto de reembolso ($" +
+                    refundAmount + ") supera el efectivo disponible en caja ($" +
+                    shift.getExpectedCashAmount() + ").");
+        }
+
+        shift.setTotalExitsAmount(shift.getTotalExitsAmount().add(refundAmount));
+        shift.setExpectedCashAmount(shift.getExpectedCashAmount().subtract(refundAmount));
+        cashShiftRepository.save(shift);
+
+        CashMovement movement = CashMovement.builder()
+                .shift(shift)
+                .type(CashMovementType.EXIT)
+                .amount(refundAmount)
+                .reason("Devolución Venta #" + sale.getId() + (reason != null && !reason.isBlank() ? " (" + reason + ")" : ""))
+                .registeredBy(username != null ? username : "usuario")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        cashMovementRepository.save(movement);
+    }
+
+    /**
      * Genera el arqueo actual (Reporte X o Reporte Z) con rango de facturas y movimientos.
      */
     public ShiftSummaryResponse getShiftSummary(Long shiftId) {

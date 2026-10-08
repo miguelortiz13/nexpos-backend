@@ -69,9 +69,25 @@ public class Sale {
     @Column(name = "cashier_username", length = 100)
     private String cashierUsername;
 
+    @Column(name = "status", length = 30)
+    @Builder.Default
+    private String status = "COMPLETED"; // COMPLETED, ANNULLED
+
+    @Column(name = "annulled_at")
+    private LocalDateTime annulledAt;
+
+    @Column(name = "annulled_by", length = 100)
+    private String annulledBy;
+
+    @Column(name = "annulment_reason", length = 255)
+    private String annulmentReason;
+
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<SaleItem> items;
 
     @OneToOne(mappedBy = "sale", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private Invoice invoice;
+
+    @OneToOne(mappedBy = "sale", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private CreditNote creditNote;
 }

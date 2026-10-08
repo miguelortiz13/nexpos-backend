@@ -7,12 +7,11 @@ import miguel.product.model.InventoryMovementType;
 import miguel.product.model.Producto;
 import miguel.product.repository.InventoryMovementRepository;
 import miguel.product.repository.ProductoRepository;
+import miguel.sales.dto.AnnulSaleRequest;
 import miguel.sales.dto.SaleItemRequest;
 import miguel.sales.dto.SaleRequest;
-import miguel.sales.model.Customer;
-import miguel.sales.model.Invoice;
-import miguel.sales.model.Sale;
-import miguel.sales.model.SaleItem;
+import miguel.sales.model.*;
+import miguel.sales.repository.CreditNoteRepository;
 import miguel.sales.repository.InvoiceRepository;
 import miguel.sales.repository.SaleRepository;
 import org.springframework.stereotype.Service;
@@ -35,6 +34,7 @@ public class SaleService {
     private final CompanyConfigService companyConfigService;
     private final FactusService factusService;
     private final CustomerService customerService;
+    private final CreditNoteRepository creditNoteRepository;
 
     @Transactional
     public Sale createSale(SaleRequest request) {
@@ -233,5 +233,101 @@ public class SaleService {
 
     public List<Sale> getAllSales() {
         return saleRepository.findAll();
+    }
+
+    /**
+     * Anula una venta registrada, revierte de forma atómica el inventario (Kardex),
+     * descuenta el efectivo de la caja activa si aplica, y genera la Nota Crédito electrónica DIAN.
+     */
+    @Transactional
+    public CreditNote annulSale(Long saleId, AnnulSaleRequest request, String username) {
+        Sale sale = getSaleById(saleId);
+
+        if ("ANNULLED".equalsIgnoreCase(sale.getStatus())) {
+            String ncNum = (sale.getCreditNote() != null) ? sale.getCreditNote().getCreditNoteNumber() : "";
+            throw new IllegalStateException("La venta #" + saleId + " ya fue anulada previamente" +
+                    (!ncNum.isBlank() ? " con Nota Crédito " + ncNum : "") + ".");
+        }
+
+        String reason = (request != null && request.getReason() != null && !request.getReason().isBlank())
+                ? request.getReason().trim()
+                : "Devolución / Anulación solicitada por el cliente";
+
+        String conceptCode = (request != null && request.getConceptCode() != null && !request.getConceptCode().isBlank())
+                ? request.getConceptCode()
+                : "2";
+
+        String cashier = (username != null && !username.isBlank()) ? username : "cajero_pos";
+
+        // 1. Reversión atómica de stock en Kardex para cada ítem de la venta
+        if (sale.getItems() != null) {
+            for (SaleItem item : sale.getItems()) {
+                Producto prod = productoRepository.findById(item.getProductId()).orElse(null);
+                if (prod != null) {
+                    int prevStock = prod.getCantidad();
+                    int newStock = prevStock + item.getQuantity();
+                    prod.setCantidad(newStock);
+                    productoRepository.save(prod);
+
+                    InventoryMovement movement = InventoryMovement.builder()
+                            .product(prod)
+                            .movementType(InventoryMovementType.DEVOLUCION)
+                            .quantity(item.getQuantity())
+                            .previousStock(prevStock)
+                            .newStock(newStock)
+                            .unitCost(prod.getCostPrice())
+                            .reason("Devolución / Anulación Venta #" + sale.getId() + " (" + reason + ")")
+                            .referenceId(String.valueOf(sale.getId()))
+                            .registeredBy(cashier)
+                            .build();
+                    inventoryMovementRepository.save(movement);
+                }
+            }
+        }
+
+        // 2. Reembolso de dinero en turno de caja activo (si aplica devolución en efectivo)
+        BigDecimal cashPortion = sale.getCashAmount() != null ? sale.getCashAmount() : BigDecimal.ZERO;
+        boolean shouldRefundCash = request == null || request.getRefundCash() == null || Boolean.TRUE.equals(request.getRefundCash());
+        BigDecimal refundCashAmount = (shouldRefundCash && cashPortion.compareTo(BigDecimal.ZERO) > 0) ? cashPortion : BigDecimal.ZERO;
+        BigDecimal refundOtherAmount = sale.getTotalAmount().subtract(refundCashAmount);
+
+        if (refundCashAmount.compareTo(BigDecimal.ZERO) > 0) {
+            cashShiftService.processSaleRefund(cashier, sale, refundCashAmount, reason);
+        }
+
+        // 3. Emisión de Nota Crédito Electrónica DIAN
+        String creditNoteNumber = companyConfigService.getAndIncrementCreditNoteNumber();
+        Long activeShiftId = cashShiftService.getActiveShift(cashier).map(CashShift::getId).orElse(null);
+
+        CreditNote creditNote = factusService.emitElectronicCreditNote(
+                sale,
+                creditNoteNumber,
+                reason,
+                conceptCode,
+                cashier,
+                refundCashAmount,
+                refundOtherAmount,
+                activeShiftId
+        );
+        CreditNote savedCreditNote = creditNoteRepository.save(creditNote);
+
+        // 4. Actualización del estado de la venta
+        sale.setStatus("ANNULLED");
+        sale.setAnnulledAt(LocalDateTime.now());
+        sale.setAnnulledBy(cashier);
+        sale.setAnnulmentReason(reason);
+        sale.setCreditNote(savedCreditNote);
+        saleRepository.save(sale);
+
+        return savedCreditNote;
+    }
+
+    public CreditNote getCreditNoteBySaleId(Long saleId) {
+        return creditNoteRepository.findBySaleId(saleId)
+                .orElseThrow(() -> new RuntimeException("No se encontró Nota Crédito emitida para la venta #" + saleId));
+    }
+
+    public List<CreditNote> getAllCreditNotes() {
+        return creditNoteRepository.findAll();
     }
 }

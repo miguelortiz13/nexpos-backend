@@ -18,6 +18,8 @@ public record CompanyConfigDTO(
         Long dianRangeFrom,
         Long dianRangeTo,
         Long dianCurrentNumber,
+        String dianNcPrefix,
+        Long dianNcCurrentNumber,
         String dianTechnicalKey,
         LocalDate dianStartDate,
         LocalDate dianEndDate,

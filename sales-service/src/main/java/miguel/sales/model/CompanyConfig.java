@@ -64,6 +64,14 @@ public class CompanyConfig {
     @Column(name = "dian_current_number", nullable = false)
     private Long dianCurrentNumber;
 
+    @Column(name = "dian_nc_prefix", length = 10)
+    @Builder.Default
+    private String dianNcPrefix = "NC";
+
+    @Column(name = "dian_nc_current_number")
+    @Builder.Default
+    private Long dianNcCurrentNumber = 1L;
+
     @Column(name = "dian_technical_key", length = 255)
     private String dianTechnicalKey;
 

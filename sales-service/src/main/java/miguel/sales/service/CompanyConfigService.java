@@ -42,6 +42,8 @@ public class CompanyConfigService {
         if (dto.dianRangeFrom() != null) config.setDianRangeFrom(dto.dianRangeFrom());
         if (dto.dianRangeTo() != null) config.setDianRangeTo(dto.dianRangeTo());
         if (dto.dianCurrentNumber() != null) config.setDianCurrentNumber(dto.dianCurrentNumber());
+        if (dto.dianNcPrefix() != null) config.setDianNcPrefix(dto.dianNcPrefix());
+        if (dto.dianNcCurrentNumber() != null) config.setDianNcCurrentNumber(dto.dianNcCurrentNumber());
         if (dto.dianTechnicalKey() != null) config.setDianTechnicalKey(dto.dianTechnicalKey());
         if (dto.dianStartDate() != null) config.setDianStartDate(dto.dianStartDate());
         if (dto.dianEndDate() != null) config.setDianEndDate(dto.dianEndDate());
@@ -72,6 +74,21 @@ public class CompanyConfigService {
         return invoiceNumber;
     }
 
+    @Transactional
+    public synchronized String getAndIncrementCreditNoteNumber() {
+        CompanyConfig config = getConfig();
+        Long current = config.getDianNcCurrentNumber() != null ? config.getDianNcCurrentNumber() : 1L;
+        String prefix = config.getDianNcPrefix() != null && !config.getDianNcPrefix().isBlank() ? config.getDianNcPrefix() : "NC";
+
+        String creditNoteNumber = String.format("%s-%d", prefix, current);
+
+        config.setDianNcCurrentNumber(current + 1);
+        config.setUpdatedAt(LocalDateTime.now());
+        companyConfigRepository.save(config);
+
+        return creditNoteNumber;
+    }
+
     private CompanyConfig createDefaultConfig() {
         CompanyConfig config = CompanyConfig.builder()
                 .nit("900.785.412-8")
@@ -88,6 +105,8 @@ public class CompanyConfigService {
                 .dianRangeFrom(1L)
                 .dianRangeTo(50000L)
                 .dianCurrentNumber(1L)
+                .dianNcPrefix("NC")
+                .dianNcCurrentNumber(1L)
                 .dianTechnicalKey("fc8eac422eba16e22ffd8c6f94b3f40a6e38162c")
                 .dianStartDate(LocalDate.of(2026, 1, 1))
                 .dianEndDate(LocalDate.of(2027, 12, 31))

@@ -4,6 +4,7 @@ import com.lowagie.text.DocumentException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import miguel.sales.dto.SaleRequest;
+import miguel.sales.model.CreditNote;
 import miguel.sales.model.Invoice;
 import miguel.sales.model.Sale;
 import miguel.sales.service.PdfService;
@@ -59,5 +60,40 @@ public class SaleController {
     public ResponseEntity<Invoice> getElectronicInvoice(@PathVariable Long id) {
         Sale sale = saleService.getSaleById(id);
         return ResponseEntity.ok(sale.getInvoice());
+    }
+
+    @PostMapping("/{id}/annul")
+    public ResponseEntity<CreditNote> annulSale(@PathVariable Long id,
+                                                @RequestBody(required = false) miguel.sales.dto.AnnulSaleRequest request,
+                                                java.security.Principal principal) {
+        String username = (principal != null) ? principal.getName() : "cajero_pos";
+        CreditNote creditNote = saleService.annulSale(id, request, username);
+        return ResponseEntity.ok(creditNote);
+    }
+
+    @GetMapping("/{id}/credit-note")
+    public ResponseEntity<CreditNote> getCreditNote(@PathVariable Long id) {
+        return ResponseEntity.ok(saleService.getCreditNoteBySaleId(id));
+    }
+
+    @GetMapping("/credit-notes")
+    public ResponseEntity<List<CreditNote>> getAllCreditNotes() {
+        return ResponseEntity.ok(saleService.getAllCreditNotes());
+    }
+
+    @GetMapping("/{id}/credit-note/pdf")
+    public void downloadCreditNotePdf(@PathVariable Long id, HttpServletResponse response) throws IOException, DocumentException {
+        Sale sale = saleService.getSaleById(id);
+        CreditNote creditNote = saleService.getCreditNoteBySaleId(id);
+        byte[] pdfBytes = pdfService.generateCreditNotePdf(creditNote, sale);
+
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "attachment; filename=credit_note_" + creditNote.getCreditNoteNumber() + ".pdf");
+        response.setContentLength(pdfBytes.length);
+
+        try (OutputStream os = response.getOutputStream()) {
+            os.write(pdfBytes);
+            os.flush();
+        }
     }
 }

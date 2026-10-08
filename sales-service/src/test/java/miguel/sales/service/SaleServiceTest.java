@@ -3,11 +3,11 @@ package miguel.sales.service;
 import miguel.product.model.Producto;
 import miguel.product.repository.InventoryMovementRepository;
 import miguel.product.repository.ProductoRepository;
+import miguel.sales.dto.AnnulSaleRequest;
 import miguel.sales.dto.SaleItemRequest;
 import miguel.sales.dto.SaleRequest;
-import miguel.sales.model.Customer;
-import miguel.sales.model.Invoice;
-import miguel.sales.model.Sale;
+import miguel.sales.model.*;
+import miguel.sales.repository.CreditNoteRepository;
 import miguel.sales.repository.InvoiceRepository;
 import miguel.sales.repository.SaleRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,6 +52,9 @@ class SaleServiceTest {
 
     @Mock
     private CustomerService customerService;
+
+    @Mock
+    private CreditNoteRepository creditNoteRepository;
 
     @InjectMocks
     private SaleService saleService;
@@ -164,5 +167,72 @@ class SaleServiceTest {
 
         RuntimeException ex = assertThrows(RuntimeException.class, () -> saleService.createSale(request, "cajero1"));
         assertTrue(ex.getMessage().contains("menor que el total"));
+    }
+
+    @Test
+    void annulSale_withValidSale_shouldRevertStockAndIssueCreditNote() {
+        Sale sale = Sale.builder()
+                .id(99L)
+                .status("COMPLETED")
+                .totalAmount(new BigDecimal("50000.00"))
+                .cashAmount(new BigDecimal("50000.00"))
+                .items(Collections.singletonList(
+                        SaleItem.builder()
+                                .productId(1L)
+                                .quantity(2)
+                                .unitPrice(new BigDecimal("25000.00"))
+                                .subTotal(new BigDecimal("50000.00"))
+                                .build()
+                ))
+                .invoice(Invoice.builder().invoiceNumber("POS-99").cude("CUDE-99").build())
+                .build();
+
+        testProduct.setCantidad(8); // currently 8 in stock
+
+        when(saleRepository.findById(99L)).thenReturn(Optional.of(sale));
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(testProduct));
+        when(companyConfigService.getAndIncrementCreditNoteNumber()).thenReturn("NC-POS-1");
+        when(factusService.emitElectronicCreditNote(any(), anyString(), anyString(), anyString(), anyString(), any(), any(), any()))
+                .thenReturn(CreditNote.builder()
+                        .creditNoteNumber("NC-POS-1")
+                        .invoiceNumber("POS-99")
+                        .totalAmount(new BigDecimal("50000.00"))
+                        .factusStatus("VALIDATED")
+                        .build());
+        when(creditNoteRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        AnnulSaleRequest request = AnnulSaleRequest.builder()
+                .reason("Devolución por garantía")
+                .conceptCode("2")
+                .refundCash(true)
+                .build();
+
+        CreditNote nc = saleService.annulSale(99L, request, "supervisor");
+
+        assertNotNull(nc);
+        assertEquals("NC-POS-1", nc.getCreditNoteNumber());
+        assertEquals("ANNULLED", sale.getStatus());
+        assertEquals("Devolución por garantía", sale.getAnnulmentReason());
+        assertEquals("supervisor", sale.getAnnulledBy());
+        assertEquals(10, testProduct.getCantidad()); // 8 + 2 returned = 10
+        verify(cashShiftService).processSaleRefund(eq("supervisor"), eq(sale), eq(new BigDecimal("50000.00")), eq("Devolución por garantía"));
+        verify(inventoryMovementRepository).save(any());
+        verify(saleRepository).save(sale);
+    }
+
+    @Test
+    void annulSale_alreadyAnnulled_shouldThrowIllegalStateException() {
+        Sale sale = Sale.builder()
+                .id(100L)
+                .status("ANNULLED")
+                .creditNote(CreditNote.builder().creditNoteNumber("NC-POS-5").build())
+                .build();
+
+        when(saleRepository.findById(100L)).thenReturn(Optional.of(sale));
+
+        AnnulSaleRequest request = AnnulSaleRequest.builder().reason("Intento duplicado").build();
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> saleService.annulSale(100L, request, "cajero1"));
+        assertTrue(ex.getMessage().contains("ya fue anulada"));
     }
 }
