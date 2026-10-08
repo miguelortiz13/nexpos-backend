@@ -35,5 +35,7 @@ public class ShiftSummaryResponse {
     private BigDecimal differenceAmount;
     private String notes;
     private String closeNotes;
+    private String firstInvoiceNumber;
+    private String lastInvoiceNumber;
     private List<CashMovement> movements;
 }

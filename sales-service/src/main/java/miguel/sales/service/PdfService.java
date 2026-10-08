@@ -61,7 +61,11 @@ public class PdfService {
         String formattedDate = sale.getSaleDate() != null ? sale.getSaleDate().format(DATE_FORMATTER) : "N/A";
         leftCell.addElement(new Paragraph("Fecha y Hora: " + formattedDate, valFont));
         leftCell.addElement(new Paragraph("Cajero: " + (sale.getCashierUsername() != null ? sale.getCashierUsername() : "Caja 1"), valFont));
-        leftCell.addElement(new Paragraph("Medio de Pago: " + (sale.getPaymentMethod() != null ? sale.getPaymentMethod() : "EFECTIVO"), valFont));
+        String methodDisplay = (sale.getPaymentMethod() != null ? sale.getPaymentMethod() : "EFECTIVO");
+        if ("MIXTO".equalsIgnoreCase(methodDisplay)) {
+            methodDisplay = "MIXTO (Pago Combinado)";
+        }
+        leftCell.addElement(new Paragraph("Medio de Pago: " + methodDisplay, valFont));
         infoTable.addCell(leftCell);
 
         PdfPCell rightCell = new PdfPCell();
@@ -116,10 +120,26 @@ public class PdfService {
 
         addSummaryRow(totalTable, "TOTAL A PAGAR:", "$" + sale.getTotalAmount(), totalFont);
 
+        if ("MIXTO".equalsIgnoreCase(sale.getPaymentMethod())) {
+            Font splitFont = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.DARK_GRAY);
+            if (sale.getCashAmount() != null && sale.getCashAmount().compareTo(BigDecimal.ZERO) > 0) {
+                addSummaryRow(totalTable, "• Efectivo:", "$" + sale.getCashAmount(), splitFont);
+            }
+            if (sale.getCardAmount() != null && sale.getCardAmount().compareTo(BigDecimal.ZERO) > 0) {
+                addSummaryRow(totalTable, "• Tarjeta / Datáfono:", "$" + sale.getCardAmount(), splitFont);
+            }
+            if (sale.getTransferAmount() != null && sale.getTransferAmount().compareTo(BigDecimal.ZERO) > 0) {
+                addSummaryRow(totalTable, "• Transferencia / QR:", "$" + sale.getTransferAmount(), splitFont);
+            }
+            if (sale.getOtherAmount() != null && sale.getOtherAmount().compareTo(BigDecimal.ZERO) > 0) {
+                addSummaryRow(totalTable, "• Otros Medios:", "$" + sale.getOtherAmount(), splitFont);
+            }
+        }
+
         if (sale.getAmountPaid() != null) {
             addSummaryRow(totalTable, "Monto Recibido:", "$" + sale.getAmountPaid(), summaryFont);
         }
-        if (sale.getChangeAmount() != null) {
+        if (sale.getChangeAmount() != null && sale.getChangeAmount().compareTo(BigDecimal.ZERO) > 0) {
             addSummaryRow(totalTable, "Cambio / Vuelto:", "$" + sale.getChangeAmount(), summaryFont);
         }
 

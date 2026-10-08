@@ -119,15 +119,78 @@ public class SaleService {
         sale.setItems(items);
         sale.setTotalAmount(calculatedTotal);
 
-        // 4. Validación de pago y cálculo de cambio/vuelto
-        BigDecimal amountPaid = request.getAmountPaid() != null ? request.getAmountPaid() : calculatedTotal;
-        if ("EFECTIVO".equalsIgnoreCase(paymentMethod) && amountPaid.compareTo(calculatedTotal) < 0) {
-            throw new RuntimeException("El monto recibido ($" + amountPaid + ") es menor que el total a pagar ($" + calculatedTotal + ").");
-        }
+        // 4. Validación de pago y cálculo de cambio/vuelto por medio de pago
+        if ("MIXTO".equalsIgnoreCase(paymentMethod)) {
+            BigDecimal reqCash = request.getCashAmount() != null ? request.getCashAmount() : BigDecimal.ZERO;
+            BigDecimal reqCard = request.getCardAmount() != null ? request.getCardAmount() : BigDecimal.ZERO;
+            BigDecimal reqTransfer = request.getTransferAmount() != null ? request.getTransferAmount() : BigDecimal.ZERO;
+            BigDecimal reqOther = request.getOtherAmount() != null ? request.getOtherAmount() : BigDecimal.ZERO;
 
-        BigDecimal change = amountPaid.subtract(calculatedTotal).max(BigDecimal.ZERO);
-        sale.setAmountPaid(amountPaid);
-        sale.setChangeAmount(change);
+            BigDecimal nonCashTotal = reqCard.add(reqTransfer).add(reqOther);
+            BigDecimal totalTendered = nonCashTotal.add(reqCash);
+
+            if (totalTendered.compareTo(calculatedTotal) < 0) {
+                throw new RuntimeException("El monto combinado proporcionado ($" + totalTendered +
+                        ") es menor que el total a pagar ($" + calculatedTotal + ").");
+            }
+
+            BigDecimal effectiveCashPortion;
+            BigDecimal change;
+
+            if (nonCashTotal.compareTo(calculatedTotal) >= 0) {
+                effectiveCashPortion = BigDecimal.ZERO;
+                change = totalTendered.subtract(calculatedTotal);
+            } else {
+                BigDecimal requiredCash = calculatedTotal.subtract(nonCashTotal);
+                if (reqCash.compareTo(requiredCash) >= 0) {
+                    effectiveCashPortion = requiredCash;
+                    change = reqCash.subtract(requiredCash);
+                } else {
+                    effectiveCashPortion = reqCash;
+                    change = BigDecimal.ZERO;
+                }
+            }
+
+            sale.setCashAmount(effectiveCashPortion);
+            sale.setCardAmount(reqCard);
+            sale.setTransferAmount(reqTransfer);
+            sale.setOtherAmount(reqOther);
+            sale.setAmountPaid(request.getAmountPaid() != null ? request.getAmountPaid() : totalTendered);
+            sale.setChangeAmount(change);
+        } else if ("EFECTIVO".equalsIgnoreCase(paymentMethod)) {
+            BigDecimal paid = request.getAmountPaid() != null ? request.getAmountPaid() : calculatedTotal;
+            if (paid.compareTo(calculatedTotal) < 0) {
+                throw new RuntimeException("El monto recibido ($" + paid + ") es menor que el total a pagar ($" + calculatedTotal + ").");
+            }
+            BigDecimal change = paid.subtract(calculatedTotal).max(BigDecimal.ZERO);
+            sale.setCashAmount(calculatedTotal);
+            sale.setCardAmount(BigDecimal.ZERO);
+            sale.setTransferAmount(BigDecimal.ZERO);
+            sale.setOtherAmount(BigDecimal.ZERO);
+            sale.setAmountPaid(paid);
+            sale.setChangeAmount(change);
+        } else if ("TARJETA".equalsIgnoreCase(paymentMethod)) {
+            sale.setCashAmount(BigDecimal.ZERO);
+            sale.setCardAmount(calculatedTotal);
+            sale.setTransferAmount(BigDecimal.ZERO);
+            sale.setOtherAmount(BigDecimal.ZERO);
+            sale.setAmountPaid(calculatedTotal);
+            sale.setChangeAmount(BigDecimal.ZERO);
+        } else if ("TRANSFERENCIA".equalsIgnoreCase(paymentMethod)) {
+            sale.setCashAmount(BigDecimal.ZERO);
+            sale.setCardAmount(BigDecimal.ZERO);
+            sale.setTransferAmount(calculatedTotal);
+            sale.setOtherAmount(BigDecimal.ZERO);
+            sale.setAmountPaid(calculatedTotal);
+            sale.setChangeAmount(BigDecimal.ZERO);
+        } else {
+            sale.setCashAmount(BigDecimal.ZERO);
+            sale.setCardAmount(BigDecimal.ZERO);
+            sale.setTransferAmount(BigDecimal.ZERO);
+            sale.setOtherAmount(calculatedTotal);
+            sale.setAmountPaid(calculatedTotal);
+            sale.setChangeAmount(BigDecimal.ZERO);
+        }
         sale.setCashierUsername(cashierUsername != null ? cashierUsername : "cajero_pos");
 
         Sale savedSale = saleRepository.save(sale);

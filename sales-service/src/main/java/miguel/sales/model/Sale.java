@@ -47,6 +47,22 @@ public class Sale {
     @Column(precision = 12, scale = 2)
     private BigDecimal changeAmount;
 
+    @Column(name = "cash_amount", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal cashAmount = BigDecimal.ZERO;
+
+    @Column(name = "card_amount", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal cardAmount = BigDecimal.ZERO;
+
+    @Column(name = "transfer_amount", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal transferAmount = BigDecimal.ZERO;
+
+    @Column(name = "other_amount", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal otherAmount = BigDecimal.ZERO;
+
     @Column(name = "cash_shift_id")
     private Long cashShiftId;
 

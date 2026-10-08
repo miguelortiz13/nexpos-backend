@@ -89,4 +89,41 @@ class PdfServiceTest {
         assertNotNull(pdfBytes);
         assertTrue(pdfBytes.length > 0);
     }
+
+    @Test
+    void generateInvoicePdfWithSplitPayment() throws IOException, DocumentException {
+        PdfService pdfService = new PdfService();
+
+        SaleItem item1 = SaleItem.builder()
+                .productName("Café Especial 500g")
+                .quantity(2)
+                .unitPrice(new BigDecimal("25000.00"))
+                .subTotal(new BigDecimal("50000.00"))
+                .ivaRate(new BigDecimal("0.19"))
+                .ivaAmount(new BigDecimal("7983.19"))
+                .baseAmount(new BigDecimal("42016.81"))
+                .build();
+
+        Sale sale = Sale.builder()
+                .id(3L)
+                .customerId(102L)
+                .customerName("Ana Gomez")
+                .customerDoc("1020304050")
+                .saleDate(LocalDateTime.now())
+                .paymentMethod("MIXTO")
+                .cashAmount(new BigDecimal("20000.00"))
+                .cardAmount(new BigDecimal("30000.00"))
+                .transferAmount(BigDecimal.ZERO)
+                .otherAmount(BigDecimal.ZERO)
+                .amountPaid(new BigDecimal("70000.00"))
+                .changeAmount(new BigDecimal("20000.00"))
+                .totalAmount(new BigDecimal("50000.00"))
+                .items(Collections.singletonList(item1))
+                .build();
+
+        byte[] pdfBytes = pdfService.generateInvoicePdf(sale);
+
+        assertNotNull(pdfBytes);
+        assertTrue(pdfBytes.length > 0);
+    }
 }

@@ -19,5 +19,9 @@ public class SaleRequest {
     private String customerEmail;
     private String paymentMethod;
     private BigDecimal amountPaid;
+    private BigDecimal cashAmount;
+    private BigDecimal cardAmount;
+    private BigDecimal transferAmount;
+    private BigDecimal otherAmount;
     private List<SaleItemRequest> items;
 }

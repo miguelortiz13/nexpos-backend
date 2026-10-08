@@ -9,6 +9,7 @@ import miguel.sales.dto.ShiftSummaryResponse;
 import miguel.sales.model.*;
 import miguel.sales.repository.CashMovementRepository;
 import miguel.sales.repository.CashShiftRepository;
+import miguel.sales.repository.SaleRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -22,6 +23,7 @@ public class CashShiftService {
 
     private final CashShiftRepository cashShiftRepository;
     private final CashMovementRepository cashMovementRepository;
+    private final SaleRepository saleRepository;
 
     /**
      * Obtiene el turno de caja actualmente abierto para un usuario, o cualquier turno abierto en la terminal.
@@ -134,34 +136,62 @@ public class CashShiftService {
         shift.setTotalSalesCount(shift.getTotalSalesCount() + 1);
         shift.setTotalSalesAmount(shift.getTotalSalesAmount().add(sale.getTotalAmount()));
 
-        String method = sale.getPaymentMethod() != null ? sale.getPaymentMethod().toUpperCase() : "EFECTIVO";
-        switch (method) {
-            case "EFECTIVO":
-                shift.setTotalSalesCash(shift.getTotalSalesCash().add(sale.getTotalAmount()));
-                shift.setExpectedCashAmount(shift.getExpectedCashAmount().add(sale.getTotalAmount()));
-                break;
-            case "TARJETA":
-                shift.setTotalSalesCard(shift.getTotalSalesCard().add(sale.getTotalAmount()));
-                break;
-            case "TRANSFERENCIA":
-                shift.setTotalSalesTransfer(shift.getTotalSalesTransfer().add(sale.getTotalAmount()));
-                break;
-            default:
-                shift.setTotalSalesOther(shift.getTotalSalesOther().add(sale.getTotalAmount()));
-                break;
+        BigDecimal cash = sale.getCashAmount() != null ? sale.getCashAmount() : BigDecimal.ZERO;
+        BigDecimal card = sale.getCardAmount() != null ? sale.getCardAmount() : BigDecimal.ZERO;
+        BigDecimal transfer = sale.getTransferAmount() != null ? sale.getTransferAmount() : BigDecimal.ZERO;
+        BigDecimal other = sale.getOtherAmount() != null ? sale.getOtherAmount() : BigDecimal.ZERO;
+
+        // Fallback si por alguna razón no se llenaron las porciones individuales
+        if (cash.compareTo(BigDecimal.ZERO) == 0 && card.compareTo(BigDecimal.ZERO) == 0 &&
+                transfer.compareTo(BigDecimal.ZERO) == 0 && other.compareTo(BigDecimal.ZERO) == 0) {
+            String method = sale.getPaymentMethod() != null ? sale.getPaymentMethod().toUpperCase() : "EFECTIVO";
+            switch (method) {
+                case "TARJETA":
+                    card = sale.getTotalAmount();
+                    break;
+                case "TRANSFERENCIA":
+                    transfer = sale.getTotalAmount();
+                    break;
+                case "EFECTIVO":
+                    cash = sale.getTotalAmount();
+                    break;
+                default:
+                    other = sale.getTotalAmount();
+                    break;
+            }
         }
+
+        shift.setTotalSalesCash(shift.getTotalSalesCash().add(cash));
+        shift.setExpectedCashAmount(shift.getExpectedCashAmount().add(cash));
+        shift.setTotalSalesCard(shift.getTotalSalesCard().add(card));
+        shift.setTotalSalesTransfer(shift.getTotalSalesTransfer().add(transfer));
+        shift.setTotalSalesOther(shift.getTotalSalesOther().add(other));
 
         cashShiftRepository.save(shift);
     }
 
     /**
-     * Genera el arqueo actual (Reporte X) sin cerrar la caja.
+     * Genera el arqueo actual (Reporte X o Reporte Z) con rango de facturas y movimientos.
      */
     public ShiftSummaryResponse getShiftSummary(Long shiftId) {
         CashShift shift = cashShiftRepository.findById(shiftId)
                 .orElseThrow(() -> new IllegalArgumentException("Turno de caja no encontrado con ID: " + shiftId));
 
         List<CashMovement> movements = cashMovementRepository.findByShiftIdOrderByCreatedAtDesc(shiftId);
+        List<Sale> sales = saleRepository.findByCashShiftIdOrderByIdAsc(shiftId);
+
+        String firstInvoice = null;
+        String lastInvoice = null;
+        if (!sales.isEmpty()) {
+            Sale first = sales.get(0);
+            firstInvoice = (first.getInvoice() != null && first.getInvoice().getInvoiceNumber() != null)
+                    ? first.getInvoice().getInvoiceNumber()
+                    : "FAC-" + first.getId();
+            Sale last = sales.get(sales.size() - 1);
+            lastInvoice = (last.getInvoice() != null && last.getInvoice().getInvoiceNumber() != null)
+                    ? last.getInvoice().getInvoiceNumber()
+                    : "FAC-" + last.getId();
+        }
 
         return ShiftSummaryResponse.builder()
                 .shiftId(shift.getId())
@@ -183,6 +213,8 @@ public class CashShiftService {
                 .differenceAmount(shift.getDifferenceAmount())
                 .notes(shift.getNotes())
                 .closeNotes(shift.getCloseNotes())
+                .firstInvoiceNumber(firstInvoice)
+                .lastInvoiceNumber(lastInvoice)
                 .movements(movements)
                 .build();
     }
