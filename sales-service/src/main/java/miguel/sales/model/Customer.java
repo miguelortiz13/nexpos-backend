@@ -50,6 +50,18 @@ public class Customer {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "credit_allowed", nullable = false)
+    @Builder.Default
+    private Boolean creditAllowed = false;
+
+    @Column(name = "credit_limit", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal creditLimit = java.math.BigDecimal.ZERO;
+
+    @Column(name = "current_debt", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal currentDebt = java.math.BigDecimal.ZERO;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -57,4 +69,10 @@ public class Customer {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public java.math.BigDecimal getAvailableCredit() {
+        java.math.BigDecimal limit = (creditLimit != null) ? creditLimit : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal debt = (currentDebt != null) ? currentDebt : java.math.BigDecimal.ZERO;
+        return limit.subtract(debt).max(java.math.BigDecimal.ZERO);
+    }
 }

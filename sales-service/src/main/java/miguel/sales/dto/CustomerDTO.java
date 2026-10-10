@@ -27,4 +27,8 @@ public class CustomerDTO {
     private String city;
     private String department;
     private String notes;
+    private Boolean creditAllowed;
+    private java.math.BigDecimal creditLimit;
+    private java.math.BigDecimal currentDebt;
+    private java.math.BigDecimal availableCredit;
 }

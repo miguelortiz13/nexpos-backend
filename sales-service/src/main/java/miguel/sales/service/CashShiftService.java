@@ -140,10 +140,12 @@ public class CashShiftService {
         BigDecimal card = sale.getCardAmount() != null ? sale.getCardAmount() : BigDecimal.ZERO;
         BigDecimal transfer = sale.getTransferAmount() != null ? sale.getTransferAmount() : BigDecimal.ZERO;
         BigDecimal other = sale.getOtherAmount() != null ? sale.getOtherAmount() : BigDecimal.ZERO;
+        BigDecimal credit = sale.getCreditAmount() != null ? sale.getCreditAmount() : BigDecimal.ZERO;
 
         // Fallback si por alguna razón no se llenaron las porciones individuales
         if (cash.compareTo(BigDecimal.ZERO) == 0 && card.compareTo(BigDecimal.ZERO) == 0 &&
-                transfer.compareTo(BigDecimal.ZERO) == 0 && other.compareTo(BigDecimal.ZERO) == 0) {
+                transfer.compareTo(BigDecimal.ZERO) == 0 && other.compareTo(BigDecimal.ZERO) == 0 &&
+                credit.compareTo(BigDecimal.ZERO) == 0) {
             String method = sale.getPaymentMethod() != null ? sale.getPaymentMethod().toUpperCase() : "EFECTIVO";
             switch (method) {
                 case "TARJETA":
@@ -151,6 +153,9 @@ public class CashShiftService {
                     break;
                 case "TRANSFERENCIA":
                     transfer = sale.getTotalAmount();
+                    break;
+                case "CREDITO":
+                    credit = sale.getTotalAmount();
                     break;
                 case "EFECTIVO":
                     cash = sale.getTotalAmount();
@@ -166,6 +171,7 @@ public class CashShiftService {
         shift.setTotalSalesCard(shift.getTotalSalesCard().add(card));
         shift.setTotalSalesTransfer(shift.getTotalSalesTransfer().add(transfer));
         shift.setTotalSalesOther(shift.getTotalSalesOther().add(other));
+        shift.setTotalSalesCredit(shift.getTotalSalesCredit().add(credit));
 
         cashShiftRepository.save(shift);
     }
@@ -208,6 +214,38 @@ public class CashShiftService {
     }
 
     /**
+     * Procesa la entrada de efectivo por abono / recaudo de cartera de cliente en el turno de caja activo.
+     */
+    @Transactional
+    public Long processCreditPaymentEntry(String username, Customer customer, BigDecimal amount, String receiptNumber) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+
+        Optional<CashShift> shiftOpt = getActiveShift(username);
+        if (shiftOpt.isEmpty()) {
+            return null;
+        }
+
+        CashShift shift = shiftOpt.get();
+        shift.setTotalEntriesAmount(shift.getTotalEntriesAmount().add(amount));
+        shift.setExpectedCashAmount(shift.getExpectedCashAmount().add(amount));
+        cashShiftRepository.save(shift);
+
+        CashMovement movement = CashMovement.builder()
+                .shift(shift)
+                .type(CashMovementType.ENTRY)
+                .amount(amount)
+                .reason("Recaudo Cartera / Abono Cliente: " + customer.getName() + " [Recibo #" + receiptNumber + "]")
+                .registeredBy(username != null ? username : "cajero_pos")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        cashMovementRepository.save(movement);
+        return shift.getId();
+    }
+
+    /**
      * Genera el arqueo actual (Reporte X o Reporte Z) con rango de facturas y movimientos.
      */
     public ShiftSummaryResponse getShiftSummary(Long shiftId) {
@@ -241,6 +279,7 @@ public class CashShiftService {
                 .totalSalesCard(shift.getTotalSalesCard())
                 .totalSalesTransfer(shift.getTotalSalesTransfer())
                 .totalSalesOther(shift.getTotalSalesOther())
+                .totalSalesCredit(shift.getTotalSalesCredit())
                 .totalSalesAmount(shift.getTotalSalesAmount())
                 .totalSalesCount(shift.getTotalSalesCount())
                 .totalEntriesAmount(shift.getTotalEntriesAmount())

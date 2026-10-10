@@ -175,4 +175,49 @@ class PdfServiceTest {
         assertNotNull(pdfBytes);
         assertTrue(pdfBytes.length > 0);
     }
+
+    @Test
+    void generateCreditPaymentReceiptPdf_shouldGenerateValidPdf() throws IOException, DocumentException {
+        PdfService pdfService = new PdfService();
+
+        miguel.sales.model.Customer customer = miguel.sales.model.Customer.builder()
+                .id(105L)
+                .docType("CC")
+                .docNumber("1144556677")
+                .name("Carlos Alberto Ruiz")
+                .email("carlos.ruiz@gmail.com")
+                .phone("3155551234")
+                .address("Calle 5 # 34-12")
+                .city("Cali")
+                .creditAllowed(true)
+                .creditLimit(new BigDecimal("500000.00"))
+                .currentDebt(new BigDecimal("150000.00"))
+                .build();
+
+        miguel.sales.model.CustomerCreditMovement movement = miguel.sales.model.CustomerCreditMovement.builder()
+                .id(1L)
+                .customer(customer)
+                .movementType(miguel.sales.model.CreditMovementType.ABONO_PAGO)
+                .amount(new BigDecimal("100000.00"))
+                .previousBalance(new BigDecimal("250000.00"))
+                .newBalance(new BigDecimal("150000.00"))
+                .paymentMethod("EFECTIVO")
+                .receiptNumber("RC-00001")
+                .notes("Abono parcial de quincena")
+                .registeredBy("cajero_pos")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        miguel.sales.model.CompanyConfig config = miguel.sales.model.CompanyConfig.builder()
+                .businessName("NexPOS Retail Colombia S.A.S.")
+                .nit("900.785.412-8")
+                .address("Av. Roosevelt # 34-50")
+                .phone("(602) 889-1234")
+                .build();
+
+        byte[] pdfBytes = pdfService.generateCreditPaymentReceiptPdf(movement, customer, config);
+
+        assertNotNull(pdfBytes);
+        assertTrue(pdfBytes.length > 0);
+    }
 }

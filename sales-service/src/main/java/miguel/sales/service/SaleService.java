@@ -34,6 +34,7 @@ public class SaleService {
     private final CompanyConfigService companyConfigService;
     private final FactusService factusService;
     private final CustomerService customerService;
+    private final CustomerCreditService customerCreditService;
     private final CreditNoteRepository creditNoteRepository;
 
     @Transactional
@@ -125,8 +126,9 @@ public class SaleService {
             BigDecimal reqCard = request.getCardAmount() != null ? request.getCardAmount() : BigDecimal.ZERO;
             BigDecimal reqTransfer = request.getTransferAmount() != null ? request.getTransferAmount() : BigDecimal.ZERO;
             BigDecimal reqOther = request.getOtherAmount() != null ? request.getOtherAmount() : BigDecimal.ZERO;
+            BigDecimal reqCredit = request.getCreditAmount() != null ? request.getCreditAmount() : BigDecimal.ZERO;
 
-            BigDecimal nonCashTotal = reqCard.add(reqTransfer).add(reqOther);
+            BigDecimal nonCashTotal = reqCard.add(reqTransfer).add(reqOther).add(reqCredit);
             BigDecimal totalTendered = nonCashTotal.add(reqCash);
 
             if (totalTendered.compareTo(calculatedTotal) < 0) {
@@ -155,8 +157,19 @@ public class SaleService {
             sale.setCardAmount(reqCard);
             sale.setTransferAmount(reqTransfer);
             sale.setOtherAmount(reqOther);
+            sale.setCreditAmount(reqCredit);
             sale.setAmountPaid(request.getAmountPaid() != null ? request.getAmountPaid() : totalTendered);
             sale.setChangeAmount(change);
+            sale.setPaymentStatus(reqCredit.compareTo(BigDecimal.ZERO) > 0 ? "PARTIALLY_PAID" : "PAID");
+        } else if ("CREDITO".equalsIgnoreCase(paymentMethod)) {
+            sale.setCashAmount(BigDecimal.ZERO);
+            sale.setCardAmount(BigDecimal.ZERO);
+            sale.setTransferAmount(BigDecimal.ZERO);
+            sale.setOtherAmount(BigDecimal.ZERO);
+            sale.setCreditAmount(calculatedTotal);
+            sale.setAmountPaid(BigDecimal.ZERO);
+            sale.setChangeAmount(BigDecimal.ZERO);
+            sale.setPaymentStatus("PENDING_CREDIT");
         } else if ("EFECTIVO".equalsIgnoreCase(paymentMethod)) {
             BigDecimal paid = request.getAmountPaid() != null ? request.getAmountPaid() : calculatedTotal;
             if (paid.compareTo(calculatedTotal) < 0) {
@@ -167,33 +180,46 @@ public class SaleService {
             sale.setCardAmount(BigDecimal.ZERO);
             sale.setTransferAmount(BigDecimal.ZERO);
             sale.setOtherAmount(BigDecimal.ZERO);
+            sale.setCreditAmount(BigDecimal.ZERO);
             sale.setAmountPaid(paid);
             sale.setChangeAmount(change);
+            sale.setPaymentStatus("PAID");
         } else if ("TARJETA".equalsIgnoreCase(paymentMethod)) {
             sale.setCashAmount(BigDecimal.ZERO);
             sale.setCardAmount(calculatedTotal);
             sale.setTransferAmount(BigDecimal.ZERO);
             sale.setOtherAmount(BigDecimal.ZERO);
+            sale.setCreditAmount(BigDecimal.ZERO);
             sale.setAmountPaid(calculatedTotal);
             sale.setChangeAmount(BigDecimal.ZERO);
+            sale.setPaymentStatus("PAID");
         } else if ("TRANSFERENCIA".equalsIgnoreCase(paymentMethod)) {
             sale.setCashAmount(BigDecimal.ZERO);
             sale.setCardAmount(BigDecimal.ZERO);
             sale.setTransferAmount(calculatedTotal);
             sale.setOtherAmount(BigDecimal.ZERO);
+            sale.setCreditAmount(BigDecimal.ZERO);
             sale.setAmountPaid(calculatedTotal);
             sale.setChangeAmount(BigDecimal.ZERO);
+            sale.setPaymentStatus("PAID");
         } else {
             sale.setCashAmount(BigDecimal.ZERO);
             sale.setCardAmount(BigDecimal.ZERO);
             sale.setTransferAmount(BigDecimal.ZERO);
             sale.setOtherAmount(calculatedTotal);
+            sale.setCreditAmount(BigDecimal.ZERO);
             sale.setAmountPaid(calculatedTotal);
             sale.setChangeAmount(BigDecimal.ZERO);
+            sale.setPaymentStatus("PAID");
         }
         sale.setCashierUsername(cashierUsername != null ? cashierUsername : "cajero_pos");
 
         Sale savedSale = saleRepository.save(sale);
+
+        // 4b. Registrar crédito en la cuenta del cliente si la venta incluye crédito
+        if (savedSale.getCreditAmount() != null && savedSale.getCreditAmount().compareTo(BigDecimal.ZERO) > 0) {
+            customerCreditService.processCreditSale(customer, savedSale, savedSale.getCreditAmount(), cashierUsername);
+        }
 
         // 5. Registrar movimientos de auditoría en Kardex para cada producto vendido
         for (SaleItem item : savedSale.getItems()) {
@@ -313,10 +339,17 @@ public class SaleService {
 
         // 4. Actualización del estado de la venta
         sale.setStatus("ANNULLED");
+        sale.setPaymentStatus("ANNULLED");
         sale.setAnnulledAt(LocalDateTime.now());
         sale.setAnnulledBy(cashier);
         sale.setAnnulmentReason(reason);
         sale.setCreditNote(savedCreditNote);
+
+        // 5. Reversión de crédito en la cuenta del cliente si la venta tenía saldo a crédito
+        if (sale.getCreditAmount() != null && sale.getCreditAmount().compareTo(BigDecimal.ZERO) > 0) {
+            customerCreditService.revertCreditOnAnnulment(sale, cashier, reason);
+        }
+
         saleRepository.save(sale);
 
         return savedCreditNote;

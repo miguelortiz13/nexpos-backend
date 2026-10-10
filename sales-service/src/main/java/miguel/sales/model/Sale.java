@@ -63,6 +63,10 @@ public class Sale {
     @Builder.Default
     private BigDecimal otherAmount = BigDecimal.ZERO;
 
+    @Column(name = "credit_amount", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal creditAmount = BigDecimal.ZERO;
+
     @Column(name = "cash_shift_id")
     private Long cashShiftId;
 
@@ -72,6 +76,10 @@ public class Sale {
     @Column(name = "status", length = 30)
     @Builder.Default
     private String status = "COMPLETED"; // COMPLETED, ANNULLED
+
+    @Column(name = "payment_status", length = 30)
+    @Builder.Default
+    private String paymentStatus = "PAID"; // PAID, PENDING_CREDIT, PARTIALLY_PAID, ANNULLED
 
     @Column(name = "annulled_at")
     private LocalDateTime annulledAt;

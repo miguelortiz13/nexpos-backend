@@ -72,6 +72,14 @@ public class CompanyConfig {
     @Builder.Default
     private Long dianNcCurrentNumber = 1L;
 
+    @Column(name = "credit_receipt_prefix", length = 10)
+    @Builder.Default
+    private String creditReceiptPrefix = "RC";
+
+    @Column(name = "credit_receipt_current_number")
+    @Builder.Default
+    private Long creditReceiptCurrentNumber = 1L;
+
     @Column(name = "dian_technical_key", length = 255)
     private String dianTechnicalKey;
 

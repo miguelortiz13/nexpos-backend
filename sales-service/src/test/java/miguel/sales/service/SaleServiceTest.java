@@ -54,6 +54,9 @@ class SaleServiceTest {
     private CustomerService customerService;
 
     @Mock
+    private CustomerCreditService customerCreditService;
+
+    @Mock
     private CreditNoteRepository creditNoteRepository;
 
     @InjectMocks
@@ -234,5 +237,84 @@ class SaleServiceTest {
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> saleService.annulSale(100L, request, "cajero1"));
         assertTrue(ex.getMessage().contains("ya fue anulada"));
+    }
+
+    @Test
+    void createSale_withCreditPayment_shouldProcessCreditSale() {
+        Customer creditCustomer = Customer.builder()
+                .id(15L)
+                .docNumber("1098765432")
+                .name("Pedro Gomez")
+                .email("pedro@gmail.com")
+                .creditAllowed(true)
+                .creditLimit(new BigDecimal("500000.00"))
+                .currentDebt(BigDecimal.ZERO)
+                .build();
+
+        when(customerService.getOrCreateCustomer(anyString(), anyString(), any(), any()))
+                .thenReturn(creditCustomer);
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(testProduct));
+        when(companyConfigService.getAndIncrementInvoiceNumber()).thenReturn("POS-100");
+        when(factusService.emitElectronicInvoice(any(), anyString()))
+                .thenReturn(Invoice.builder().invoiceNumber("POS-100").build());
+        when(invoiceRepository.save(any(Invoice.class)))
+                .thenAnswer(i -> i.getArgument(0));
+        when(saleRepository.save(any(Sale.class))).thenAnswer(i -> {
+            Sale s = i.getArgument(0);
+            s.setId(101L);
+            return s;
+        });
+
+        SaleItemRequest itemReq = new SaleItemRequest();
+        itemReq.setProductId(1L);
+        itemReq.setQuantity(2);
+
+        SaleRequest request = new SaleRequest();
+        request.setCustomerId(15L);
+        request.setCustomerName("Pedro Gomez");
+        request.setCustomerDoc("1098765432");
+        request.setPaymentMethod("CREDITO");
+        request.setItems(Collections.singletonList(itemReq));
+
+        Sale createdSale = saleService.createSale(request, "cajero1");
+
+        assertNotNull(createdSale);
+        assertEquals("CREDITO", createdSale.getPaymentMethod());
+        assertEquals("PENDING_CREDIT", createdSale.getPaymentStatus());
+        assertEquals(new BigDecimal("50000.00"), createdSale.getCreditAmount());
+        assertEquals(BigDecimal.ZERO, createdSale.getCashAmount());
+
+        verify(customerCreditService).processCreditSale(eq(creditCustomer), any(Sale.class), eq(new BigDecimal("50000.00")), eq("cajero1"));
+    }
+
+    @Test
+    void annulSale_withCreditPortion_shouldRevertCredit() {
+        Sale sale = Sale.builder()
+                .id(102L)
+                .status("COMPLETED")
+                .customerId(15L)
+                .creditAmount(new BigDecimal("50000.00"))
+                .cashAmount(BigDecimal.ZERO)
+                .totalAmount(new BigDecimal("50000.00"))
+                .items(Collections.emptyList())
+                .build();
+
+        when(saleRepository.findById(102L)).thenReturn(Optional.of(sale));
+        when(companyConfigService.getAndIncrementCreditNoteNumber()).thenReturn("NC-POS-102");
+        when(factusService.emitElectronicCreditNote(any(), anyString(), anyString(), anyString(), anyString(), any(), any(), any()))
+                .thenReturn(CreditNote.builder().creditNoteNumber("NC-POS-102").build());
+        when(creditNoteRepository.save(any(CreditNote.class))).thenAnswer(i -> i.getArgument(0));
+        when(cashShiftService.getActiveShift(anyString())).thenReturn(Optional.empty());
+
+        AnnulSaleRequest request = AnnulSaleRequest.builder()
+                .reason("Devolución por garantía")
+                .refundCash(false)
+                .build();
+
+        saleService.annulSale(102L, request, "cajero1");
+
+        assertEquals("ANNULLED", sale.getStatus());
+        assertEquals("ANNULLED", sale.getPaymentStatus());
+        verify(customerCreditService).revertCreditOnAnnulment(eq(sale), eq("cajero1"), eq("Devolución por garantía"));
     }
 }

@@ -44,6 +44,8 @@ public class CompanyConfigService {
         if (dto.dianCurrentNumber() != null) config.setDianCurrentNumber(dto.dianCurrentNumber());
         if (dto.dianNcPrefix() != null) config.setDianNcPrefix(dto.dianNcPrefix());
         if (dto.dianNcCurrentNumber() != null) config.setDianNcCurrentNumber(dto.dianNcCurrentNumber());
+        if (dto.creditReceiptPrefix() != null) config.setCreditReceiptPrefix(dto.creditReceiptPrefix());
+        if (dto.creditReceiptCurrentNumber() != null) config.setCreditReceiptCurrentNumber(dto.creditReceiptCurrentNumber());
         if (dto.dianTechnicalKey() != null) config.setDianTechnicalKey(dto.dianTechnicalKey());
         if (dto.dianStartDate() != null) config.setDianStartDate(dto.dianStartDate());
         if (dto.dianEndDate() != null) config.setDianEndDate(dto.dianEndDate());
@@ -87,6 +89,21 @@ public class CompanyConfigService {
         companyConfigRepository.save(config);
 
         return creditNoteNumber;
+    }
+
+    @Transactional
+    public synchronized String getAndIncrementCreditReceiptNumber() {
+        CompanyConfig config = getConfig();
+        Long current = config.getCreditReceiptCurrentNumber() != null ? config.getCreditReceiptCurrentNumber() : 1L;
+        String prefix = config.getCreditReceiptPrefix() != null && !config.getCreditReceiptPrefix().isBlank() ? config.getCreditReceiptPrefix() : "RC";
+
+        String receiptNumber = String.format("%s-%05d", prefix, current);
+
+        config.setCreditReceiptCurrentNumber(current + 1);
+        config.setUpdatedAt(LocalDateTime.now());
+        companyConfigRepository.save(config);
+
+        return receiptNumber;
     }
 
     private CompanyConfig createDefaultConfig() {

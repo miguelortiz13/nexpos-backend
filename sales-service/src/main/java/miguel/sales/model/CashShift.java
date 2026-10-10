@@ -70,6 +70,10 @@ public class CashShift {
     @Builder.Default
     private BigDecimal totalSalesOther = BigDecimal.ZERO;
 
+    @Column(name = "total_sales_credit", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal totalSalesCredit = BigDecimal.ZERO;
+
     @Column(name = "total_sales_amount", nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal totalSalesAmount = BigDecimal.ZERO;

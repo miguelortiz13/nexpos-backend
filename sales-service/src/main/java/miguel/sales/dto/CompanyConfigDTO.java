@@ -20,6 +20,8 @@ public record CompanyConfigDTO(
         Long dianCurrentNumber,
         String dianNcPrefix,
         Long dianNcCurrentNumber,
+        String creditReceiptPrefix,
+        Long creditReceiptCurrentNumber,
         String dianTechnicalKey,
         LocalDate dianStartDate,
         LocalDate dianEndDate,

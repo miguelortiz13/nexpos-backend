@@ -52,6 +52,9 @@ public class CustomerService {
                 .city(dto.getCity() != null ? dto.getCity().trim() : "Cali")
                 .department(dto.getDepartment() != null ? dto.getDepartment().trim() : "Valle del Cauca")
                 .notes(dto.getNotes())
+                .creditAllowed(dto.getCreditAllowed() != null ? dto.getCreditAllowed() : false)
+                .creditLimit(dto.getCreditLimit() != null && dto.getCreditLimit().compareTo(java.math.BigDecimal.ZERO) >= 0 ? dto.getCreditLimit() : java.math.BigDecimal.ZERO)
+                .currentDebt(java.math.BigDecimal.ZERO)
                 .build();
 
         return customerRepository.save(customer);
@@ -77,6 +80,10 @@ public class CustomerService {
         if (dto.getCity() != null) customer.setCity(dto.getCity().trim());
         if (dto.getDepartment() != null) customer.setDepartment(dto.getDepartment().trim());
         if (dto.getNotes() != null) customer.setNotes(dto.getNotes());
+        if (dto.getCreditAllowed() != null) customer.setCreditAllowed(dto.getCreditAllowed());
+        if (dto.getCreditLimit() != null && dto.getCreditLimit().compareTo(java.math.BigDecimal.ZERO) >= 0) {
+            customer.setCreditLimit(dto.getCreditLimit());
+        }
 
         return customerRepository.save(customer);
     }

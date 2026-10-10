@@ -26,6 +26,7 @@ public class ShiftSummaryResponse {
     private BigDecimal totalSalesCard;
     private BigDecimal totalSalesTransfer;
     private BigDecimal totalSalesOther;
+    private BigDecimal totalSalesCredit;
     private BigDecimal totalSalesAmount;
     private Integer totalSalesCount;
     private BigDecimal totalEntriesAmount;

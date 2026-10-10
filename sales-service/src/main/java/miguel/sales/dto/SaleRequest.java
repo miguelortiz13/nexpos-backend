@@ -23,5 +23,6 @@ public class SaleRequest {
     private BigDecimal cardAmount;
     private BigDecimal transferAmount;
     private BigDecimal otherAmount;
+    private BigDecimal creditAmount;
     private List<SaleItemRequest> items;
 }

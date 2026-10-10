@@ -4,10 +4,7 @@ import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
-import miguel.sales.model.CreditNote;
-import miguel.sales.model.Invoice;
-import miguel.sales.model.Sale;
-import miguel.sales.model.SaleItem;
+import miguel.sales.model.*;
 import org.springframework.stereotype.Service;
 
 import java.awt.Color;
@@ -380,5 +377,143 @@ public class PdfService {
             headerCell.setPadding(5);
             table.addCell(headerCell);
         }
+    }
+
+    /**
+     * Genera el comprobante formal en PDF de un Recibo de Caja / Abono a Cartera de cliente.
+     */
+    public byte[] generateCreditPaymentReceiptPdf(CustomerCreditMovement movement, Customer customer, CompanyConfig config) throws DocumentException, IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        Document document = new Document(PageSize.A4, 36, 36, 36, 36);
+        PdfWriter.getInstance(document, out);
+
+        document.open();
+
+        String businessName = (config != null && config.getBusinessName() != null) ? config.getBusinessName() : "NEXPOS RETAIL & COMMERCE";
+        String nit = (config != null && config.getNit() != null) ? config.getNit() : "900.785.412-8";
+        String address = (config != null && config.getAddress() != null) ? config.getAddress() : "Cali, Colombia";
+        String phone = (config != null && config.getPhone() != null) ? config.getPhone() : "(602) 889-1234";
+
+        // Título y membrete
+        Font headerFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, new Color(13, 148, 136));
+        Paragraph title = new Paragraph(businessName, headerFont);
+        title.setAlignment(Element.ALIGN_CENTER);
+        document.add(title);
+
+        Font subHeaderFont = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.DARK_GRAY);
+        Paragraph subTitle = new Paragraph("NIT: " + nit + " • " + address + " • Tel: " + phone + "\nCOMPROBANTE DE RECAUDO Y ABONO A CARTERA", subHeaderFont);
+        subTitle.setAlignment(Element.ALIGN_CENTER);
+        document.add(subTitle);
+
+        document.add(Chunk.NEWLINE);
+
+        Font labelFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK);
+        Font valFont = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
+
+        // Tabla de datos del comprobante y cliente
+        PdfPTable infoTable = new PdfPTable(2);
+        infoTable.setWidthPercentage(100);
+        infoTable.setWidths(new float[]{1, 1});
+
+        PdfPCell leftCell = new PdfPCell();
+        leftCell.setBorder(Rectangle.NO_BORDER);
+        leftCell.addElement(new Paragraph("RECIBO DE CAJA NO: " + (movement.getReceiptNumber() != null ? movement.getReceiptNumber() : "RC-" + movement.getId()), FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, new Color(13, 148, 136))));
+        leftCell.addElement(new Paragraph("Fecha y Hora: " + (movement.getCreatedAt() != null ? movement.getCreatedAt().format(DATE_FORMATTER) : "N/A"), valFont));
+        leftCell.addElement(new Paragraph("Medio de Pago: " + (movement.getPaymentMethod() != null ? movement.getPaymentMethod() : "EFECTIVO"), valFont));
+        leftCell.addElement(new Paragraph("Recibido por: " + movement.getRegisteredBy(), valFont));
+        infoTable.addCell(leftCell);
+
+        PdfPCell rightCell = new PdfPCell();
+        rightCell.setBorder(Rectangle.NO_BORDER);
+        rightCell.addElement(new Paragraph("DATOS DEL CLIENTE", labelFont));
+        rightCell.addElement(new Paragraph("Nombre: " + (customer != null ? customer.getName() : "Cliente"), valFont));
+        rightCell.addElement(new Paragraph("Documento: " + (customer != null ? customer.getDocType() + " " + customer.getDocNumber() : "N/A"), valFont));
+        rightCell.addElement(new Paragraph("Teléfono: " + (customer != null && customer.getPhone() != null ? customer.getPhone() : "N/A"), valFont));
+        rightCell.addElement(new Paragraph("Dirección: " + (customer != null && customer.getAddress() != null ? customer.getAddress() : "Cali"), valFont));
+        infoTable.addCell(rightCell);
+
+        document.add(infoTable);
+        document.add(Chunk.NEWLINE);
+
+        // Tabla de desglose de cartera
+        PdfPTable balanceTable = new PdfPTable(2);
+        balanceTable.setWidthPercentage(100);
+        balanceTable.setWidths(new float[]{2, 1});
+
+        PdfPCell headerB1 = new PdfPCell(new Phrase("CONCEPTO / ESTADO DE CUENTA", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.WHITE)));
+        headerB1.setBackgroundColor(new Color(13, 148, 136));
+        headerB1.setPadding(6);
+        balanceTable.addCell(headerB1);
+
+        PdfPCell headerB2 = new PdfPCell(new Phrase("MONTO COP", FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.WHITE)));
+        headerB2.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        headerB2.setBackgroundColor(new Color(13, 148, 136));
+        headerB2.setPadding(6);
+        balanceTable.addCell(headerB2);
+
+        addBalanceRow(balanceTable, "Saldo Anterior de Deuda:", movement.getPreviousBalance(), false, valFont);
+        addBalanceRow(balanceTable, "VALOR ABONADO / RECAUDADO:", movement.getAmount(), true, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 11, new Color(5, 150, 105)));
+        addBalanceRow(balanceTable, "Nuevo Saldo Pendiente de Deuda:", movement.getNewBalance(), false, FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.BLACK));
+
+        if (customer != null && customer.getCreditLimit() != null) {
+            BigDecimal avail = customer.getCreditLimit().subtract(movement.getNewBalance()).max(BigDecimal.ZERO);
+            addBalanceRow(balanceTable, "Cupo Total Aprobado:", customer.getCreditLimit(), false, valFont);
+            addBalanceRow(balanceTable, "Cupo de Crédito Disponible Restante:", avail, false, valFont);
+        }
+
+        document.add(balanceTable);
+        document.add(Chunk.NEWLINE);
+
+        if (movement.getNotes() != null && !movement.getNotes().isBlank()) {
+            Paragraph notesPar = new Paragraph("Observaciones: " + movement.getNotes(), FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9, Color.DARK_GRAY));
+            document.add(notesPar);
+            document.add(Chunk.NEWLINE);
+        }
+
+        // Firmas
+        PdfPTable signaturesTable = new PdfPTable(2);
+        signaturesTable.setWidthPercentage(100);
+        signaturesTable.setWidths(new float[]{1, 1});
+
+        PdfPCell sigCustomer = new PdfPCell();
+        sigCustomer.setBorder(Rectangle.NO_BORDER);
+        sigCustomer.addElement(new Paragraph("\n\n________________________________________\nFirma del Cliente\nC.C. / NIT: " + (customer != null ? customer.getDocNumber() : ""), valFont));
+        signaturesTable.addCell(sigCustomer);
+
+        PdfPCell sigCashier = new PdfPCell();
+        sigCashier.setBorder(Rectangle.NO_BORDER);
+        sigCashier.addElement(new Paragraph("\n\n________________________________________\nFirma y Sello Cajero Responsable\nUsuario: " + movement.getRegisteredBy(), valFont));
+        signaturesTable.addCell(sigCashier);
+
+        document.add(signaturesTable);
+        document.add(Chunk.NEWLINE);
+
+        Font footerFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 8, Color.GRAY);
+        Paragraph footer = new Paragraph(
+                "NexPOS Retail System • Este recibo constituye soporte oficial y contable del recaudo efectuado a cartera.",
+                footerFont
+        );
+        footer.setAlignment(Element.ALIGN_CENTER);
+        document.add(footer);
+
+        document.close();
+        return out.toByteArray();
+    }
+
+    private void addBalanceRow(PdfPTable table, String concept, BigDecimal amount, boolean isHighlight, Font font) {
+        PdfPCell c1 = new PdfPCell(new Phrase(concept, font));
+        c1.setPadding(6);
+        if (isHighlight) {
+            c1.setBackgroundColor(new Color(240, 253, 250));
+        }
+        table.addCell(c1);
+
+        PdfPCell c2 = new PdfPCell(new Phrase(String.format("$%,.2f", amount != null ? amount : BigDecimal.ZERO), font));
+        c2.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        c2.setPadding(6);
+        if (isHighlight) {
+            c2.setBackgroundColor(new Color(240, 253, 250));
+        }
+        table.addCell(c2);
     }
 }
