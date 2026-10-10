@@ -28,7 +28,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql-db:3306/marketcali_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=miguel
       - SPRING_DATASOURCE_PASSWORD=12345
-      - JWT_SECRET=QzNaTzh0ZXN0c2VjcmV0a2V5Zm9ybWFya2V0Y2FsaXNlY3VyaXR5MTIzNDU2Nzg5MA==
+      - JWT_SECRET=${JWT_SECRET:?Define JWT_SECRET en .env (ver .env.example)}
     restart: on-failure
     depends_on:
       mysql-db:

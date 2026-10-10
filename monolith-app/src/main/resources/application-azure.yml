@@ -1,0 +1,30 @@
+# Perfil de Azure (SPRING_PROFILES_ACTIVE=azure).
+# La base es Azure SQL con autenticación de identidad administrada: la URL
+# JDBC trae `authentication=ActiveDirectoryManagedIdentity` y no hay usuario ni
+# contraseña.
+spring:
+  datasource:
+    username: ""
+    password: ""
+    hikari:
+      # La base gratis se pausa sin uso; al reanudar, las conexiones viejas
+      # mueren. Conexiones cortas y validación evitan errores tras la pausa.
+      max-lifetime: 300000
+      idle-timeout: 120000
+      minimum-idle: 0
+      maximum-pool-size: 5
+      connection-timeout: 90000
+  jpa:
+    open-in-view: false
+    hibernate:
+      # El esquema lo gestiona solo Flyway.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # NVARCHAR en SQL Server (nombres con tildes y ñ).
+        use_nationalized_character_data: true
+
+management:
+  endpoint:
+    health:
+      show-details: never
