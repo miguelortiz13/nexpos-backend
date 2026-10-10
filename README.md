@@ -447,7 +447,11 @@ Esta opción levanta todo el entorno (Base de Datos MySQL, Monolito Spring Boot 
 git clone https://github.com/miguelortiz13/nexpos-backend.git
 cd nexpos-backend
 
-# 2. Levantar los servicios y compilar las imágenes
+# 2. Crear el secreto JWT local (la app no trae uno por defecto)
+cp .env.example .env
+sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')|" .env
+
+# 3. Levantar los servicios y compilar las imágenes
 docker compose up -d --build
 ```
 
@@ -557,20 +561,35 @@ La suite valida:
 
 ## ☁️ Despliegue Cloud en Azure con Terraform
 
-El repositorio incluye plantillas completas de **Infraestructura como Código (IaC)** en la carpeta `/terraform`:
+La infraestructura vive en [`infra/terraform`](infra/terraform) y usa los módulos
+de [terraform-modules-iac](https://github.com/miguelortiz13/terraform-modules-iac).
+Está pensada para la **capa gratuita** de Azure (costo esperado: USD 0):
 
-- **Azure Container Registry (ACR)**: Almacenamiento seguro de imágenes Docker (`acr.tf`).
-- **Azure Container Apps (ACA)**: Entorno serverless de contenedores gestionados con escalado automático (`aca.tf`).
-- **Azure Database for MySQL Flexible Server**: Instancia relacional gestionada con alta disponibilidad (`mysql.tf`).
+| Componente | Servicio |
+|---|---|
+| API (Spring Boot) | Azure Container Apps, escala a cero (0.5 vCPU / 1 GiB) |
+| Frontend (React) | Azure Static Web Apps Free ([nexpos-frontend](https://github.com/miguelortiz13/nexpos-frontend)) |
+| Base de datos | Azure SQL Database con la oferta gratuita; migraciones Flyway en `db/migration/sqlserver` |
+| Secretos | Key Vault (`jwt-secret`, `admin-password`) leídos con identidad administrada |
+| Imágenes | GitHub Container Registry (GHCR) |
 
-Para desplegar en la nube de Azure:
+La app entra a Azure SQL **sin contraseña** (identidad administrada) y en local
+sigue usando MySQL con docker compose: Flyway elige las migraciones según el
+motor (`db/migration/{vendor}`).
+
+**Pipelines (OIDC, sin secretos en GitHub):**
+
+- `infra.yml`: `terraform plan` en cada PR y `apply` en `master` con aprobación.
+- `ci.yml`: build, pruebas, publicación en GHCR y despliegue de la imagen en Container Apps con verificación de salud.
+
+**Prueba de humo** del flujo de negocio (producto → turno → venta → factura → anulación):
+
 ```bash
-cd terraform
-terraform init
-terraform plan -out=main.tfplan
-terraform apply main.tfplan
+./scripts/smoke-test.sh https://<api> admin <contraseña de Key Vault>
 ```
-*(Consulta [terraform/README.md](terraform/README.md) para más detalles sobre variables de suscripción y grupos de recursos).*
+
+> La base gratis se pausa tras 60 minutos sin uso; la primera petición después
+> de una pausa puede tardar hasta ~1 minuto mientras se reanuda.
 
 ---
 

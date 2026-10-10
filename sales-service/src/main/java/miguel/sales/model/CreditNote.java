@@ -2,6 +2,8 @@ package miguel.sales.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import lombok.ToString;
+import lombok.EqualsAndHashCode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -81,5 +83,9 @@ public class CreditNote {
     @OneToOne
     @JoinColumn(name = "sale_id", nullable = false)
     @JsonIgnore
+    // Referencia de vuelta: fuera de equals/hashCode/toString para evitar el
+    // ciclo infinito con la entidad padre (StackOverflowError al crear ventas).
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Sale sale;
 }
