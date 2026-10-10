@@ -51,3 +51,15 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+# Variables locales de docker compose
+.env
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+plan.txt
+*.tfvars
+!*.tfvars.example
