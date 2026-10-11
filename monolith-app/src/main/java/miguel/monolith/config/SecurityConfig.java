@@ -61,6 +61,9 @@ public class SecurityConfig {
                         // Configuración fiscal de empresa y DIAN / Factus: lectura autenticada, mutación ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/company-config/**").authenticated()
                         .requestMatchers("/api/company-config/**").hasRole("ADMIN")
+                        // Proveedores y compras: usuarios autenticados (cajeros y admin)
+                        .requestMatchers("/api/suppliers/**").authenticated()
+                        .requestMatchers("/api/purchases/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
