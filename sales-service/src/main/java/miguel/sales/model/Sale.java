@@ -73,6 +73,16 @@ public class Sale {
     @Column(name = "cashier_username", length = 100)
     private String cashierUsername;
 
+    @Column(name = "offline_reference", length = 100)
+    private String offlineReference;
+
+    @Column(name = "offline_created_at")
+    private LocalDateTime offlineCreatedAt;
+
+    @Column(name = "is_offline_sync")
+    @Builder.Default
+    private Boolean isOfflineSync = false;
+
     @Column(name = "status", length = 30)
     @Builder.Default
     private String status = "COMPLETED"; // COMPLETED, ANNULLED

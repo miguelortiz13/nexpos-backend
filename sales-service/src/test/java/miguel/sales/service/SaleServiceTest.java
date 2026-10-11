@@ -317,4 +317,60 @@ class SaleServiceTest {
         assertEquals("ANNULLED", sale.getPaymentStatus());
         verify(customerCreditService).revertCreditOnAnnulment(eq(sale), eq("cajero1"), eq("Devolución por garantía"));
     }
+
+    @Test
+    void createSale_withOfflineReference_shouldSetOfflineMetadata() {
+        when(saleRepository.findByOfflineReference("OFFLINE-12345")).thenReturn(Optional.empty());
+        when(customerService.getOrCreateCustomer(anyString(), anyString(), any(), any())).thenReturn(testCustomer);
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(testProduct));
+        when(companyConfigService.getAndIncrementInvoiceNumber()).thenReturn("POS-200");
+        when(factusService.emitElectronicInvoice(any(), anyString()))
+                .thenReturn(Invoice.builder().invoiceNumber("POS-200").build());
+        when(invoiceRepository.save(any(Invoice.class))).thenAnswer(i -> i.getArgument(0));
+        when(saleRepository.save(any(Sale.class))).thenAnswer(i -> i.getArgument(0));
+
+        SaleItemRequest itemReq = new SaleItemRequest();
+        itemReq.setProductId(1L);
+        itemReq.setQuantity(1);
+
+        SaleRequest request = SaleRequest.builder()
+                .customerDoc("222222222222")
+                .paymentMethod("EFECTIVO")
+                .amountPaid(new BigDecimal("25000.00"))
+                .offlineReference("OFFLINE-12345")
+                .offlineCreatedAt(java.time.LocalDateTime.now().minusMinutes(10))
+                .items(Collections.singletonList(itemReq))
+                .build();
+
+        Sale created = saleService.createSale(request, "cajero1");
+
+        assertNotNull(created);
+        assertEquals("OFFLINE-12345", created.getOfflineReference());
+        assertTrue(created.getIsOfflineSync());
+        assertNotNull(created.getOfflineCreatedAt());
+    }
+
+    @Test
+    void createSale_withExistingOfflineReference_shouldReturnExistingSaleIdempotently() {
+        Sale existingSale = Sale.builder()
+                .id(88L)
+                .offlineReference("OFFLINE-ALREADY-SYNCED")
+                .status("COMPLETED")
+                .totalAmount(new BigDecimal("50000.00"))
+                .build();
+
+        when(saleRepository.findByOfflineReference("OFFLINE-ALREADY-SYNCED")).thenReturn(Optional.of(existingSale));
+
+        SaleRequest request = SaleRequest.builder()
+                .offlineReference("OFFLINE-ALREADY-SYNCED")
+                .build();
+
+        Sale result = saleService.createSale(request, "cajero1");
+
+        assertNotNull(result);
+        assertEquals(88L, result.getId());
+        assertEquals("OFFLINE-ALREADY-SYNCED", result.getOfflineReference());
+        verify(saleRepository, never()).save(any());
+        verify(productoRepository, never()).save(any());
+    }
 }

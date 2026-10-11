@@ -24,5 +24,7 @@ public class SaleRequest {
     private BigDecimal transferAmount;
     private BigDecimal otherAmount;
     private BigDecimal creditAmount;
+    private String offlineReference;
+    private java.time.LocalDateTime offlineCreatedAt;
     private List<SaleItemRequest> items;
 }

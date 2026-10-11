@@ -31,6 +31,12 @@ public class SaleController {
         return new ResponseEntity<>(saleService.createSale(request, cashier), HttpStatus.CREATED);
     }
 
+    @PostMapping("/sync-offline")
+    public ResponseEntity<List<Sale>> syncOfflineSales(@RequestBody List<SaleRequest> requests, java.security.Principal principal) {
+        String cashier = (principal != null) ? principal.getName() : "cajero_pos";
+        return ResponseEntity.ok(saleService.syncOfflineSales(requests, cashier));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Sale> getSale(@PathVariable Long id) {
         return ResponseEntity.ok(saleService.getSaleById(id));

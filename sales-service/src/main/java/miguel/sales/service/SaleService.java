@@ -46,6 +46,14 @@ public class SaleService {
 
     @Transactional
     public Sale createSale(SaleRequest request, String cashierUsername) {
+        // Verificación de idempotencia para ventas sincronizadas en modo offline
+        if (request.getOfflineReference() != null && !request.getOfflineReference().isBlank()) {
+            java.util.Optional<Sale> existing = saleRepository.findByOfflineReference(request.getOfflineReference().trim());
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new RuntimeException("La venta debe contener al menos un producto.");
         }
@@ -66,6 +74,12 @@ public class SaleService {
         sale.setCustomerName(customer.getName());
         sale.setCustomerEmail(customer.getEmail());
         sale.setSaleDate(LocalDateTime.now());
+
+        if (request.getOfflineReference() != null && !request.getOfflineReference().isBlank()) {
+            sale.setOfflineReference(request.getOfflineReference().trim());
+            sale.setOfflineCreatedAt(request.getOfflineCreatedAt() != null ? request.getOfflineCreatedAt() : LocalDateTime.now());
+            sale.setIsOfflineSync(true);
+        }
 
         String paymentMethod = (request.getPaymentMethod() != null && !request.getPaymentMethod().isBlank())
                 ? request.getPaymentMethod().toUpperCase()
@@ -232,6 +246,9 @@ public class SaleService {
             Producto prod = lockedProductsMap.getOrDefault(item.getProductId(),
                     productoRepository.findById(item.getProductId()).orElse(null));
             if (prod != null) {
+                String saleRefReason = Boolean.TRUE.equals(savedSale.getIsOfflineSync())
+                        ? "Venta Contingencia Offline #" + savedSale.getId() + " (Ref: " + savedSale.getOfflineReference() + ")"
+                        : "Venta POS #" + savedSale.getId();
                 InventoryMovement movement = InventoryMovement.builder()
                         .product(prod)
                         .movementType(InventoryMovementType.VENTA)
@@ -239,7 +256,7 @@ public class SaleService {
                         .previousStock(prod.getCantidad() + item.getQuantity())
                         .newStock(prod.getCantidad())
                         .unitCost(prod.getCostPrice())
-                        .reason("Venta POS #" + savedSale.getId())
+                        .reason(saleRefReason)
                         .referenceId(String.valueOf(savedSale.getId()))
                         .registeredBy(cashierUsername != null ? cashierUsername : "cajero_pos")
                         .build();
@@ -371,5 +388,17 @@ public class SaleService {
 
     public List<CreditNote> getAllCreditNotes() {
         return creditNoteRepository.findAll();
+    }
+
+    @Transactional
+    public List<Sale> syncOfflineSales(List<SaleRequest> requests, String cashierUsername) {
+        List<Sale> results = new ArrayList<>();
+        if (requests == null || requests.isEmpty()) {
+            return results;
+        }
+        for (SaleRequest req : requests) {
+            results.add(createSale(req, cashierUsername));
+        }
+        return results;
     }
 }
