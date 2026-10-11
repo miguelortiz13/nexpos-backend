@@ -64,6 +64,7 @@ public class SecurityConfig {
                         // Proveedores y compras: usuarios autenticados (cajeros y admin)
                         .requestMatchers("/api/suppliers/**").authenticated()
                         .requestMatchers("/api/purchases/**").authenticated()
+                        .requestMatchers("/api/forecasting/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
