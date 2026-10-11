@@ -8,9 +8,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @SpringBootApplication(scanBasePackages = "miguel")
 @EntityScan(basePackages = "miguel")
 @EnableJpaRepositories(basePackages = "miguel")
-public class MarketcaliMonolithApplication {
+public class NexPosMonolithApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(MarketcaliMonolithApplication.class, args);
+        SpringApplication.run(NexPosMonolithApplication.class, args);
     }
 }

@@ -20,7 +20,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -72,6 +74,7 @@ public class SaleService {
 
         List<SaleItem> items = new ArrayList<>();
         BigDecimal calculatedTotal = BigDecimal.ZERO;
+        Map<Long, Producto> lockedProductsMap = new HashMap<>();
 
         for (SaleItemRequest itemReq : request.getItems()) {
             if (itemReq.getProductId() == null) {
@@ -81,10 +84,13 @@ public class SaleService {
                 throw new RuntimeException("La cantidad debe ser mayor a 0.");
             }
 
-            Producto producto = productoRepository.findById(itemReq.getProductId())
+            // 1. Bloqueo pesimista de escritura (SELECT ... FOR UPDATE) para concurrencia multi-caja segura
+            Producto producto = productoRepository.findByIdForUpdate(itemReq.getProductId())
+                    .or(() -> productoRepository.findById(itemReq.getProductId()))
                     .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + itemReq.getProductId()));
+            lockedProductsMap.put(producto.getId(), producto);
 
-            // 1. Validación de stock disponible
+            // Validación de stock disponible
             if (producto.getCantidad() < itemReq.getQuantity()) {
                 throw new RuntimeException("Stock insuficiente para '" + producto.getNombre() +
                         "'. Disponible: " + producto.getCantidad() + ", solicitado: " + itemReq.getQuantity());
@@ -223,7 +229,8 @@ public class SaleService {
 
         // 5. Registrar movimientos de auditoría en Kardex para cada producto vendido
         for (SaleItem item : savedSale.getItems()) {
-            Producto prod = productoRepository.findById(item.getProductId()).orElse(null);
+            Producto prod = lockedProductsMap.getOrDefault(item.getProductId(),
+                    productoRepository.findById(item.getProductId()).orElse(null));
             if (prod != null) {
                 InventoryMovement movement = InventoryMovement.builder()
                         .product(prod)
@@ -288,7 +295,9 @@ public class SaleService {
         // 1. Reversión atómica de stock en Kardex para cada ítem de la venta
         if (sale.getItems() != null) {
             for (SaleItem item : sale.getItems()) {
-                Producto prod = productoRepository.findById(item.getProductId()).orElse(null);
+                Producto prod = productoRepository.findByIdForUpdate(item.getProductId())
+                        .or(() -> productoRepository.findById(item.getProductId()))
+                        .orElse(null);
                 if (prod != null) {
                     int prevStock = prod.getCantidad();
                     int newStock = prevStock + item.getQuantity();

@@ -124,7 +124,7 @@ nexpos-backend/
 │   ├── Dockerfile                           # Build multietapa (Maven 3.9 -> Eclipse Temurin JRE)
 │   └── src/main/
 │       ├── java/miguel/monolith/
-│       │   ├── MarketcaliMonolithApplication.java # Entry point con @EntityScan y @EnableJpaRepositories
+│       │   ├── NexPosMonolithApplication.java # Entry point con @EntityScan y @EnableJpaRepositories
 │       │   ├── config/                      # Configuración de Spring Security, CORS y Beans
 │       │   └── exception/                   # GlobalExceptionHandler (@ControllerAdvice centralizado)
 │       └── resources/
