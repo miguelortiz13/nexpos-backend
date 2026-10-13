@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
@@ -25,6 +27,8 @@ public class PurchaseItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "purchase_id", nullable = false)
     @JsonBackReference
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     private Purchase purchase;
 
     @ManyToOne(fetch = FetchType.EAGER)
