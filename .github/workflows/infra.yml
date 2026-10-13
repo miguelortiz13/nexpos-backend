@@ -4,10 +4,10 @@ name: Infra
 # plataforma: plan en cada PR, apply en master con aprobación (environment prod).
 on:
   pull_request:
-    paths: ["infra/**", ".github/workflows/infra.yml"]
+    paths: ["infra/**", ".checkov.yaml", ".github/workflows/infra.yml"]
   push:
     branches: [master]
-    paths: ["infra/**", ".github/workflows/infra.yml"]
+    paths: ["infra/**", ".checkov.yaml", ".github/workflows/infra.yml"]
   workflow_dispatch:
 
 permissions:
