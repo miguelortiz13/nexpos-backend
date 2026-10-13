@@ -1,0 +1,10 @@
+# Excepciones de Checkov para infra/terraform (las lee el workflow de infra).
+# Cada una está justificada; el resto de controles se aplican.
+skip-check:
+  # Los módulos de terraform-modules-iac se fijan por etiqueta de versión
+  # (?ref=vX.Y.Z), según el estándar de versionado; no por hash de commit.
+  - CKV_TF_1
+  # jwt-secret y admin-password los genera Terraform (random_password) y los
+  # lee la app al arrancar. Una caducidad tumbaría la API al vencer; se rotan
+  # con `terraform apply -replace=random_password.<nombre>`.
+  - CKV_AZURE_41
