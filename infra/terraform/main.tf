@@ -18,6 +18,18 @@ module "naming" {
   repository  = "miguelortiz13/nexpos-backend"
 }
 
+# Nombres de Azure SQL con el código de su propia región (ver var.sql_location).
+module "naming_sql" {
+  source = "git::https://github.com/miguelortiz13/terraform-modules-iac.git//modules/azure/naming?ref=v0.2.0"
+
+  project     = "nexpos"
+  environment = "prod"
+  location    = var.sql_location
+  unique_seed = data.azurerm_client_config.current.subscription_id
+  owner       = var.owner
+  repository  = "miguelortiz13/nexpos-backend"
+}
+
 module "rg" {
   source = "git::https://github.com/miguelortiz13/terraform-modules-iac.git//modules/azure/resource-group?ref=v0.2.0"
 
@@ -104,8 +116,8 @@ resource "azurerm_key_vault_secret" "admin" {
 module "sql" {
   source = "git::https://github.com/miguelortiz13/terraform-modules-iac.git//modules/azure/mssql-serverless-free?ref=v0.2.0"
 
-  server_name         = module.naming.names.mssql_server
-  database_name       = module.naming.names.mssql_database
+  server_name         = module.naming_sql.names.mssql_server
+  database_name       = module.naming_sql.names.mssql_database
   resource_group_name = module.rg.name
   location            = var.sql_location
   tags                = module.naming.tags
