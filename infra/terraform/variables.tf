@@ -10,6 +10,12 @@ variable "location" {
   default     = "eastus2"
 }
 
+variable "sql_location" {
+  description = "Región de Azure SQL. Las suscripciones nuevas tienen SQL restringido en eastus2/eastus (ProvisioningDisabled); centralus sí lo permite."
+  type        = string
+  default     = "centralus"
+}
+
 variable "owner" {
   description = "Responsable (etiqueta Owner)."
   type        = string
