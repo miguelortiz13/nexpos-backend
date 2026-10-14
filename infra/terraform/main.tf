@@ -107,7 +107,7 @@ module "sql" {
   server_name         = module.naming.names.mssql_server
   database_name       = module.naming.names.mssql_database
   resource_group_name = module.rg.name
-  location            = module.rg.location
+  location            = var.sql_location
   tags                = module.naming.tags
 
   entra_admin = {
