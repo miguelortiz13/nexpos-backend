@@ -6,48 +6,26 @@ on:
   pull_request:
     branches: [ master ]
 
-# Imagen, despliegue y seguridad con los workflows estándar de
-# miguelortiz13/ci-workflows; el build y las pruebas propias quedan aquí.
+# Pipeline armado con los workflows estándar de miguelortiz13/github-workflows;
+# el smoke test con docker compose es propio del proyecto y se queda aquí.
 permissions:
   contents: read
 
 jobs:
   security-scan:
     name: Security baseline
-    uses: miguelortiz13/ci-workflows/.github/workflows/security-baseline.yml@v0.1.2
+    uses: miguelortiz13/github-workflows/.github/workflows/security-baseline.yml@v0.2.0
     permissions:
       contents: read
       pull-requests: write
 
   build-and-test:
     name: Maven Compile & Unit Tests
-    runs-on: ubuntu-latest
     needs: security-scan
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Compile and Run Unit Tests
-        run: mvn clean test --batch-mode
-
-      - name: Verify Package & Artifact Assembly
-        run: mvn package -DskipTests --batch-mode
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: surefire-test-reports
-          path: '**/target/surefire-reports/*'
-          if-no-files-found: ignore
+    uses: miguelortiz13/github-workflows/.github/workflows/build-java-maven.yml@v0.2.0
+    with:
+      java-version: "17"
+      command: mvn --batch-mode --no-transfer-progress clean package
 
   smoke-test-e2e:
     name: End-to-End Live Container Smoke Test
@@ -88,24 +66,36 @@ jobs:
         run: docker compose down -v
 
   docker-publish:
-    name: Imagen (Trivy, GHCR, SBOM y Cosign)
+    name: Imagen (build, Trivy y GHCR)
     needs: [build-and-test, smoke-test-e2e]
-    uses: miguelortiz13/ci-workflows/.github/workflows/container-image.yml@v0.1.2
+    uses: miguelortiz13/github-workflows/.github/workflows/container-build.yml@v0.2.0
     permissions:
       contents: read
       packages: write
-      id-token: write
     with:
       image-name: nexpos-backend
       dockerfile: monolith-app/Dockerfile
       push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
 
+  sign:
+    name: Firma y SBOM (Cosign)
+    needs: docker-publish
+    if: needs.docker-publish.outputs.ref != ''
+    uses: miguelortiz13/github-workflows/.github/workflows/container-sign.yml@v0.2.0
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    with:
+      image-ref: ${{ needs.docker-publish.outputs.ref }}
+
   deploy-azure:
     name: Deploy API to Azure Container Apps
-    needs: docker-publish
+    # Solo se despliega una imagen firmada.
+    needs: [docker-publish, sign]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     # Environment protegido: aprobación obligatoria y solo rama master.
-    uses: miguelortiz13/ci-workflows/.github/workflows/deploy-container-app.yml@v0.1.2
+    uses: miguelortiz13/github-workflows/.github/workflows/deploy-azure-container-app.yml@v0.2.0
     permissions:
       contents: read
       id-token: write
