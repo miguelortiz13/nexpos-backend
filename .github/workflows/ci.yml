@@ -14,7 +14,7 @@ permissions:
 jobs:
   security-scan:
     name: Security baseline
-    uses: miguelortiz13/ci-workflows/.github/workflows/security-baseline.yml@v0.1.0
+    uses: miguelortiz13/ci-workflows/.github/workflows/security-baseline.yml@v0.1.1
     permissions:
       contents: read
       pull-requests: write
@@ -90,7 +90,7 @@ jobs:
   docker-publish:
     name: Imagen (Trivy, GHCR, SBOM y Cosign)
     needs: [build-and-test, smoke-test-e2e]
-    uses: miguelortiz13/ci-workflows/.github/workflows/container-image.yml@v0.1.0
+    uses: miguelortiz13/ci-workflows/.github/workflows/container-image.yml@v0.1.1
     permissions:
       contents: read
       packages: write
@@ -105,7 +105,7 @@ jobs:
     needs: docker-publish
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     # Environment protegido: aprobación obligatoria y solo rama master.
-    uses: miguelortiz13/ci-workflows/.github/workflows/deploy-container-app.yml@v0.1.0
+    uses: miguelortiz13/ci-workflows/.github/workflows/deploy-container-app.yml@v0.1.1
     permissions:
       contents: read
       id-token: write
