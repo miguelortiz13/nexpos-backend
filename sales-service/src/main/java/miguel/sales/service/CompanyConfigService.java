@@ -63,7 +63,8 @@ public class CompanyConfigService {
 
     @Transactional
     public synchronized String getAndIncrementInvoiceNumber() {
-        CompanyConfig config = getConfig();
+        CompanyConfig config = companyConfigRepository.findFirstForUpdate()
+                .orElseGet(this::createDefaultConfig);
         Long current = config.getDianCurrentNumber() != null ? config.getDianCurrentNumber() : 1L;
         String prefix = config.getDianPrefix() != null && !config.getDianPrefix().isBlank() ? config.getDianPrefix() : "POS";
 
@@ -78,7 +79,8 @@ public class CompanyConfigService {
 
     @Transactional
     public synchronized String getAndIncrementCreditNoteNumber() {
-        CompanyConfig config = getConfig();
+        CompanyConfig config = companyConfigRepository.findFirstForUpdate()
+                .orElseGet(this::createDefaultConfig);
         Long current = config.getDianNcCurrentNumber() != null ? config.getDianNcCurrentNumber() : 1L;
         String prefix = config.getDianNcPrefix() != null && !config.getDianNcPrefix().isBlank() ? config.getDianNcPrefix() : "NC";
 
@@ -93,7 +95,8 @@ public class CompanyConfigService {
 
     @Transactional
     public synchronized String getAndIncrementCreditReceiptNumber() {
-        CompanyConfig config = getConfig();
+        CompanyConfig config = companyConfigRepository.findFirstForUpdate()
+                .orElseGet(this::createDefaultConfig);
         Long current = config.getCreditReceiptCurrentNumber() != null ? config.getCreditReceiptCurrentNumber() : 1L;
         String prefix = config.getCreditReceiptPrefix() != null && !config.getCreditReceiptPrefix().isBlank() ? config.getCreditReceiptPrefix() : "RC";
 

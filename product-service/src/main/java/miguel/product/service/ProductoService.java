@@ -1,9 +1,11 @@
 package miguel.product.service;
 
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import miguel.product.dto.ProductoDTO;
 import miguel.product.model.Producto;
+import miguel.product.repository.InventoryMovementRepository;
 import miguel.product.repository.ProductoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,21 +13,21 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class ProductoService {
 
-    @Autowired
-    private ProductoRepository productoRepository;
+    private final ProductoRepository productoRepository;
+    private final InventoryMovementRepository inventoryMovementRepository;
 
-    @Autowired
-    private miguel.product.repository.InventoryMovementRepository inventoryMovementRepository;
-
+    @Transactional(readOnly = true)
     public List<Producto> listarTodos() {
         return productoRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public Producto buscarPorId(Long id) {
         return productoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado con ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con ID: " + id));
     }
 
     @Transactional(readOnly = true)
@@ -33,11 +35,19 @@ public class ProductoService {
         return productoRepository.findByCodigoBarras(codigoBarras);
     }
 
+    @Transactional(readOnly = true)
+    public List<Producto> buscarProductos(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return listarTodos();
+        }
+        return productoRepository.searchProducts(query.trim());
+    }
+
     @Transactional
     public Producto crearProducto(ProductoDTO productoDTO) {
         // Verificar si el código de barras ya existe
         if (productoRepository.existsByCodigoBarras(productoDTO.codigoBarras())) {
-            throw new RuntimeException("El código de barras ya está registrado");
+            throw new IllegalArgumentException("El código de barras ya está registrado: " + productoDTO.codigoBarras());
         }
 
         Producto producto = new Producto();
@@ -71,7 +81,7 @@ public class ProductoService {
         // Verificar si el nuevo código de barras ya existe (si ha cambiado)
         if (!producto.getCodigoBarras().equals(productoDTO.codigoBarras()) &&
                 productoRepository.existsByCodigoBarras(productoDTO.codigoBarras())) {
-            throw new RuntimeException("El nuevo código de barras ya está registrado");
+            throw new IllegalArgumentException("El nuevo código de barras ya está registrado: " + productoDTO.codigoBarras());
         }
 
         int stockAnterior = producto.getCantidad();
@@ -101,7 +111,7 @@ public class ProductoService {
     @Transactional
     public void eliminarProducto(Long id) {
         if (!productoRepository.existsById(id)) {
-            throw new RuntimeException("Producto no encontrado con ID: " + id);
+            throw new EntityNotFoundException("Producto no encontrado con ID: " + id);
         }
         productoRepository.deleteById(id);
     }
@@ -180,10 +190,7 @@ public class ProductoService {
 
     @Transactional(readOnly = true)
     public List<Producto> obtenerProductosBajoStock() {
-        return productoRepository.findAll()
-                .stream()
-                .filter(p -> p.getCantidad() <= p.getMinStock())
-                .toList();
+        return productoRepository.findLowStockProducts();
     }
 
     private void mapearDTOaProducto(ProductoDTO dto, Producto producto) {

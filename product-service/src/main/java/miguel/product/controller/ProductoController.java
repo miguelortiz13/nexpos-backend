@@ -1,28 +1,38 @@
 package miguel.product.controller;
 
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import miguel.product.dto.InventoryMovementDTO;
+import miguel.product.dto.InventoryMovementRequest;
 import miguel.product.dto.ProductoDTO;
 import miguel.product.model.Producto;
 import miguel.product.service.ProductoService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
+import java.security.Principal;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/productos")
+@RequiredArgsConstructor
 public class ProductoController {
 
-    @Autowired
-    private ProductoService productoService;
+    private final ProductoService productoService;
 
     // GET: Listar todos (público)
     @GetMapping
     public ResponseEntity<List<Producto>> listarProductos() {
         return ResponseEntity.ok(productoService.listarTodos());
+    }
+
+    // GET: Buscar por término (público)
+    @GetMapping("/buscar")
+    public ResponseEntity<List<Producto>> buscarProductos(
+            @RequestParam(name = "q", required = false, defaultValue = "") String query) {
+        return ResponseEntity.ok(productoService.buscarProductos(query));
     }
 
     // GET: Buscar por ID (público)
@@ -34,27 +44,19 @@ public class ProductoController {
     // POST: Crear nuevo producto (solo ADMIN)
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> crearProducto(@Valid @RequestBody ProductoDTO productoDTO) {
-        try {
-            Producto nuevoProducto = productoService.crearProducto(productoDTO);
-            return new ResponseEntity<>(nuevoProducto, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        }
+    public ResponseEntity<Producto> crearProducto(@Valid @RequestBody ProductoDTO productoDTO) {
+        Producto nuevoProducto = productoService.crearProducto(productoDTO);
+        return new ResponseEntity<>(nuevoProducto, HttpStatus.CREATED);
     }
 
     // PUT: Actualizar (solo ADMIN)
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> actualizarProducto(
+    public ResponseEntity<Producto> actualizarProducto(
             @PathVariable Long id,
             @Valid @RequestBody ProductoDTO productoDTO) {
-        try {
-            Producto productoActualizado = productoService.actualizarProducto(id, productoDTO);
-            return ResponseEntity.ok(productoActualizado);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
+        Producto productoActualizado = productoService.actualizarProducto(id, productoDTO);
+        return ResponseEntity.ok(productoActualizado);
     }
 
     // DELETE: Eliminar (solo ADMIN)
@@ -67,7 +69,7 @@ public class ProductoController {
 
     // GET: Buscar por código de barras (público)
     @GetMapping("/codigo/{codigoBarras}")
-    public ResponseEntity<?> buscarPorCodigoBarras(@PathVariable String codigoBarras) {
+    public ResponseEntity<Producto> buscarPorCodigoBarras(@PathVariable String codigoBarras) {
         return productoService.buscarPorCodigoBarras(codigoBarras)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -76,30 +78,26 @@ public class ProductoController {
     // POST: Registrar movimiento de inventario / Kardex (ENTRADA, SALIDA, AJUSTE)
     @PostMapping("/{id}/movimientos")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<?> registrarMovimiento(
+    public ResponseEntity<InventoryMovementDTO> registrarMovimiento(
             @PathVariable Long id,
-            @Valid @RequestBody miguel.product.dto.InventoryMovementRequest request,
-            java.security.Principal principal) {
-        try {
-            String username = principal != null ? principal.getName() : "ADMIN";
-            miguel.product.dto.InventoryMovementDTO movimiento = productoService.registrarMovimiento(id, request, username);
-            return new ResponseEntity<>(movimiento, HttpStatus.CREATED);
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
-        }
+            @Valid @RequestBody InventoryMovementRequest request,
+            Principal principal) {
+        String username = principal != null ? principal.getName() : "ADMIN";
+        InventoryMovementDTO movimiento = productoService.registrarMovimiento(id, request, username);
+        return new ResponseEntity<>(movimiento, HttpStatus.CREATED);
     }
 
     // GET: Obtener historial Kardex de un producto
     @GetMapping("/{id}/movimientos")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<List<miguel.product.dto.InventoryMovementDTO>> obtenerMovimientosPorProducto(@PathVariable Long id) {
+    public ResponseEntity<List<InventoryMovementDTO>> obtenerMovimientosPorProducto(@PathVariable Long id) {
         return ResponseEntity.ok(productoService.obtenerMovimientosPorProducto(id));
     }
 
     // GET: Obtener movimientos recientes globales de inventario
     @GetMapping("/movimientos")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<miguel.product.dto.InventoryMovementDTO>> obtenerMovimientosRecientes() {
+    public ResponseEntity<List<InventoryMovementDTO>> obtenerMovimientosRecientes() {
         return ResponseEntity.ok(productoService.obtenerMovimientosRecientes());
     }
 
